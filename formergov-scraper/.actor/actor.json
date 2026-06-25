@@ -1,0 +1,15 @@
+{
+	"$schema": "https://apify.com/schemas/v1/actor.ide.json",
+	"actorSpecification": 1,
+	"name": "formergov-scraper",
+	"title": "Getting started with Python and Scrapy",
+	"description": "Scrapes titles of websites using Scrapy.",
+	"version": "0.0",
+	"buildTag": "latest",
+	"meta": {
+		"templateId": "python-scrapy",
+		"generatedBy": "<FILL-IN-MODEL>"
+	},
+	"input": "./input_schema.json",
+	"dockerfile": "../Dockerfile"
+}
