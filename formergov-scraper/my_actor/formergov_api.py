@@ -15,7 +15,7 @@ from urllib.parse import parse_qs, urlencode, urlparse
 API_BASE = 'https://cdn.formergov.com/api/main'
 SITE_BASE = 'https://formergov.com'
 
-# Search endpoint, e.g. /api/main/data/profiles?type=current&page=1&pageSize=20
+# Search endpoint, e.g. /api/main/data/profiles?type=combined&page=1&pageSize=20
 SEARCH_PATH = '/data/profiles'
 # Full profile document, e.g. /api/main/data/profile/brianlevine
 PROFILE_PATH = '/data/profile/{username}'
