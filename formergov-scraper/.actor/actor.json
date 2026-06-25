@@ -14,6 +14,7 @@
 		"generatedBy": "Claude Code with Claude Opus 4.8"
 	},
 	"input": "./input_schema.json",
+	"output": "./output_schema.json",
 	"storages": {
 		"dataset": "./dataset_schema.json"
 	},

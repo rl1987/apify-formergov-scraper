@@ -1,0 +1,22 @@
+{
+    "$schema": "https://apify-projects.github.io/actor-json-schemas/output.json?v=0.3",
+    "actorOutputSchemaVersion": 1,
+    "title": "FormerGov directory scraper output",
+    "properties": {
+        "profiles": {
+            "type": "string",
+            "title": "Scraped profiles",
+            "template": "{{links.apiDefaultDatasetUrl}}/items"
+        },
+        "datasetOverview": {
+            "type": "string",
+            "title": "Profiles (Overview view)",
+            "template": "{{links.apiDefaultDatasetUrl}}/items?view=overview"
+        },
+        "contacts": {
+            "type": "string",
+            "title": "Contacts (name, LinkedIn, website)",
+            "template": "{{links.apiDefaultDatasetUrl}}/items?view=contacts"
+        }
+    }
+}
