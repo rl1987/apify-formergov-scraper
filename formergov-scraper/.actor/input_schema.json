@@ -178,7 +178,7 @@
         "proxyConfiguration": {
             "title": "Proxy configuration",
             "type": "object",
-            "description": "Proxy servers used by the scraper. The Former Gov API is behind AWS WAF, which mainly blocks non-browser requests (handled by the scraper's browser headers); blocked requests are retried on a fresh IP. If you hit persistent HTTP 403 warnings, the WAF is likely rejecting datacenter IPs — switch to RESIDENTIAL proxy groups here.",
+            "description": "Proxy servers used by the scraper. The site has anti-bot protection that mainly blocks non-browser requests (handled by the scraper's browser headers); blocked requests are retried on a fresh IP. If you hit persistent HTTP 403 warnings, some datacenter IPs are likely being rejected — switch to RESIDENTIAL proxy groups here.",
             "editor": "proxy",
             "prefill": { "useApifyProxy": true },
             "default": { "useApifyProxy": true }

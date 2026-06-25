@@ -129,7 +129,7 @@ The Actor uses lightweight HTTP requests (no headless browser), so it is inexpen
 - **Combined searches**: set `searchType` to `combined` and use `combinedFilters` for the second role leg (e.g. current law-firm role + former federal role).
 - **Future-proofing**: any filter not exposed in the form can be passed through `extraSearchParams`.
 - **Deep pagination**: the search API windows very large result sets, so for the most complete coverage split big pulls into narrower filtered queries rather than one unbounded run.
-- **WAF / 403 errors**: Former Gov is fronted by AWS WAF. It primarily blocks non-browser requests, which the Actor handles by sending browser headers, pacing requests (AutoThrottle), and retrying blocked requests on a fresh IP. The WAF can also reject some datacenter IPs by reputation; if you see **persistent** `HTTP 403` warnings, switch the proxy to **residential** groups in the input.
+- **403 errors**: Former Gov has anti-bot protection that primarily blocks non-browser requests, which the Actor handles by sending browser headers, pacing requests (AutoThrottle), and retrying blocked requests on a fresh IP. Some datacenter IPs can also be rejected by reputation; if you see **persistent** `HTTP 403` warnings, switch the proxy to **residential** groups in the input.
 
 ## FAQ, disclaimers, and support
 
