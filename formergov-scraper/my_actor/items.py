@@ -1,4 +1,4 @@
-"""Scrapy item model for a scraped Former Gov directory profile.
+"""Scrapy item model for a scraped FormerGov directory profile.
 
 For detailed information on creating and utilizing items, refer to the official documentation:
 https://docs.scrapy.org/en/latest/topics/items.html

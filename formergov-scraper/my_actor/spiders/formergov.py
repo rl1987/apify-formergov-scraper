@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
 
 class FormerGovSpider(Spider):
-    """Scrape the Former Gov directory via its public JSON API.
+    """Scrape the FormerGov directory via its public JSON API.
 
     Two modes:
       * Search mode - page through ``/data/profiles`` with the requested filters and

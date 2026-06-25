@@ -1,4 +1,4 @@
-"""Scrapy settings for the Former Gov directory scraper.
+"""Scrapy settings for the FormerGov directory scraper.
 
 For more comprehensive details on Scrapy settings, refer to the official documentation:
 http://doc.scrapy.org/en/latest/topics/settings.html
@@ -11,7 +11,7 @@ SPIDER_MODULES = ['my_actor.spiders']
 
 LOG_LEVEL = 'INFO'
 
-# The Former Gov data is served by a JSON API (cdn.formergov.com/api) which is not
+# The FormerGov data is served by a JSON API (cdn.formergov.com/api) which is not
 # covered by a machine-readable robots.txt - the host returns the SPA HTML for
 # /robots.txt. We target only public profile data, so robots obeying is disabled.
 ROBOTSTXT_OBEY = False

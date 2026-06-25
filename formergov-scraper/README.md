@@ -1,14 +1,14 @@
-# Former Gov Directory Scraper
+# FormerGov Directory Scraper
 
-**Extract former government and military professionals from the [Former Gov](https://formergov.com) directory — with their contact info (LinkedIn profile and website) and full professional background.** Mirror the site's advanced search with structured filters, or pull specific profiles by username. Built with Scrapy on the Apify platform, so you get scheduling, a versioned API, integrations, proxy rotation, and run monitoring out of the box.
+**Extract former government and military professionals from the [FormerGov](https://formergov.com) directory — with their contact info (LinkedIn profile and website) and full professional background.** Mirror the site's advanced search with structured filters, or pull specific profiles by username. Built with Scrapy on the Apify platform, so you get scheduling, a versioned API, integrations, proxy rotation, and run monitoring out of the box.
 
-## What does Former Gov Directory Scraper do?
+## What does FormerGov Directory Scraper do?
 
-[Former Gov](https://formergov.com) is an apolitical directory that connects former federal, state, local, tribal, and foreign government and military professionals with people who need their expertise. This Actor turns that directory into structured data: for every matching person it returns their name, headline, location, employment history, sectors, practice areas, and — most importantly — their **contact points**: LinkedIn profile URL and personal/employer website.
+[FormerGov](https://formergov.com) is an apolitical directory that connects former federal, state, local, tribal, and foreign government and military professionals with people who need their expertise. This Actor turns that directory into structured data: for every matching person it returns their name, headline, location, employment history, sectors, practice areas, and — most importantly — their **contact points**: LinkedIn profile URL and personal/employer website.
 
-It talks directly to Former Gov's public JSON API, so it is fast and reliable. The same advanced-search filters available on the website (keyword, practice areas, sectors, functions, jurisdiction, position type, agency, location, and more) are exposed as Actor input, so you can target exactly the people you care about.
+It talks directly to FormerGov's public JSON API, so it is fast and reliable. The same advanced-search filters available on the website (keyword, practice areas, sectors, functions, jurisdiction, position type, agency, location, and more) are exposed as Actor input, so you can target exactly the people you care about.
 
-## Why use Former Gov Directory Scraper?
+## Why use FormerGov Directory Scraper?
 
 - **Lead generation & business development** — build targeted lists of former officials by practice area, sector, or agency.
 - **Recruiting & executive search** — find candidates with specific government or military backgrounds.
@@ -16,7 +16,7 @@ It talks directly to Former Gov's public JSON API, so it is fast and reliable. T
 - **Research & due diligence** — map the post-government careers of professionals in a field.
 - **CRM enrichment** — append LinkedIn and website contact points to existing records.
 
-## How to use Former Gov Directory Scraper
+## How to use FormerGov Directory Scraper
 
 1. Open the Actor in Apify Console and go to the **Input** tab.
 2. Pick a **Search type** (Combined, Current, or Former roles) and add any filters you want — e.g. set **Practice areas** to `Cybersecurity` and **Jurisdiction** to `Federal`. Leave filters empty to scrape the whole directory.
@@ -91,7 +91,7 @@ Each dataset item is one person. You can download the dataset in various formats
   ],
   "clearVerified": true,
   "currentTitle": "Founder and Executive Director",
-  "currentEmployer": "Former Gov",
+  "currentEmployer": "FormerGov",
   "sectors": ["Consulting Services", "Public Services", "Legal", "Technology"],
   "practiceAreas": ["Artificial Intelligence", "Cybersecurity", "Privacy / Data Privacy"],
   "functions": ["Cybersecurity", "Data Privacy", "Technology"],
@@ -119,7 +119,7 @@ Each dataset item is one person. You can download the dataset in various formats
 | `profilePicture` | Profile image URL. |
 | `scrapedAt` | ISO timestamp of extraction. |
 
-## How much does it cost to scrape Former Gov?
+## How much does it cost to scrape FormerGov?
 
 The Actor uses lightweight HTTP requests (no headless browser), so it is inexpensive: roughly two requests per profile (one search page covers many profiles, plus one request per profile). Scraping a few hundred profiles typically costs a small fraction of a compute unit. Use `maxItems` to cap spend on large runs. Costs depend on your Apify plan and proxy usage.
 
@@ -130,10 +130,10 @@ The Actor uses lightweight HTTP requests (no headless browser), so it is inexpen
 - **Future-proofing**: any filter not exposed in the form can be passed through `extraSearchParams`.
 - **Search result ceiling**: a single search returns at most **10,000** results (the backend's pagination window). The full directory is well under that, but for a filtered search exceeding 10,000, split it into narrower queries (e.g. by jurisdiction, sector, or state) to reach everything. The Actor logs a warning when a search exceeds this ceiling.
 - **Missing & blocked profiles**: some directory usernames have no public profile (HTTP 404) and are skipped. Profiles blocked by a temporary IP block (HTTP 403) are automatically retried at the end of the run, so transient blocks don't drop them. The run's final log line reports how many were scraped, not-found, and permanently failed.
-- **403 errors**: Former Gov has anti-bot protection that primarily blocks non-browser requests, which the Actor handles by sending browser headers, pacing requests (AutoThrottle), and retrying blocked requests on a fresh IP. Some datacenter IPs can also be rejected by reputation; if you see **persistent** `HTTP 403` warnings, switch the proxy to **residential** groups in the input.
+- **403 errors**: FormerGov has anti-bot protection that primarily blocks non-browser requests, which the Actor handles by sending browser headers, pacing requests (AutoThrottle), and retrying blocked requests on a fresh IP. Some datacenter IPs can also be rejected by reputation; if you see **persistent** `HTTP 403` warnings, switch the proxy to **residential** groups in the input.
 
 ## FAQ, disclaimers, and support
 
-**Is scraping Former Gov legal?** This Actor collects only publicly available profile information that Former Gov members choose to publish in the public directory. You are responsible for using the data in compliance with Former Gov's Terms of Service, applicable laws (including data-protection rules such as GDPR/CCPA), and for respecting individuals' privacy. Do not use the data for spam or any unlawful purpose.
+**Is scraping FormerGov legal?** This Actor collects only publicly available profile information that FormerGov members choose to publish in the public directory. You are responsible for using the data in compliance with FormerGov's Terms of Service, applicable laws (including data-protection rules such as GDPR/CCPA), and for respecting individuals' privacy. Do not use the data for spam or any unlawful purpose.
 
 **Found a bug or need a custom field?** Open an issue on the Actor's **Issues** tab. Custom scraping solutions can be arranged on request.

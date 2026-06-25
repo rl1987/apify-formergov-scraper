@@ -1,6 +1,6 @@
 {
     "$schema": "https://apify.com/schemas/v1/input.ide.json",
-    "title": "Former Gov Directory Scraper",
+    "title": "FormerGov Directory Scraper",
     "type": "object",
     "schemaVersion": 1,
     "properties": {

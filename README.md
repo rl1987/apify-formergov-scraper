@@ -1,8 +1,8 @@
 # apify-formergov-scraper
 
-An Apify Actor (built with Scrapy) that scrapes the [Former Gov](https://formergov.com)
+An Apify Actor (built with Scrapy) that scrapes the [FormerGov](https://formergov.com)
 directory of former government and military professionals, extracting person details and
-contact info (LinkedIn profile URL, website URL, and email when public). It mirrors the
+contact info (LinkedIn profile URL and website URL). It mirrors the
 site's advanced search via structured input filters.
 
 The Actor lives in [`formergov-scraper/`](./formergov-scraper). See its
@@ -19,7 +19,7 @@ apify push           # deploy to the Apify platform
 
 ## How it works
 
-- **Search** — calls the public Former Gov JSON API (`cdn.formergov.com/api`) directory
+- **Search** — calls the public FormerGov JSON API (`cdn.formergov.com/api`) directory
   search endpoint with the requested filters and paginates through results.
 - **Profiles** — fetches each matching profile's structured JSON and maps it to a flat
   output row (name, location, roles, sectors, practice areas, and contact links).

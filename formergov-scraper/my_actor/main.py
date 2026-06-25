@@ -1,7 +1,7 @@
-"""Main entry point for the Former Gov directory Apify Actor.
+"""Main entry point for the FormerGov directory Apify Actor.
 
 Reads the Actor input, resolves advanced-search facet names into the ids the API
-expects, and runs the Scrapy spider against the Former Gov public JSON API. The
+expects, and runs the Scrapy spider against the FormerGov public JSON API. The
 Apify-Scrapy integration (custom scheduler, dataset item pipeline, proxy handling)
 is applied via ``apply_apify_settings``.
 
@@ -52,7 +52,7 @@ def _usernames_from_input(actor_input: dict) -> list[str]:
 
 
 async def main() -> None:
-    """Apify Actor main coroutine for executing the Former Gov Scrapy spider."""
+    """Apify Actor main coroutine for executing the FormerGov Scrapy spider."""
     async with Actor:
         actor_input = await Actor.get_input() or {}
 

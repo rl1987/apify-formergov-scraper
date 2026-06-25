@@ -1,4 +1,4 @@
-"""Parse Former Gov profile data into output rows.
+"""Parse FormerGov profile data into output rows.
 
 Profiles are read from the clean profile JSON returned by ``cdn.formergov.com/api``.
 """

@@ -1,4 +1,4 @@
-"""Helpers for talking to the Former Gov public JSON API.
+"""Helpers for talking to the FormerGov public JSON API.
 
 The site (https://formergov.com) is a Next.js front-end backed by a public,
 unauthenticated JSON API hosted at ``https://cdn.formergov.com/api``. This module
@@ -26,7 +26,7 @@ SEARCH_PATH = '/data/profiles'
 # Full profile document, e.g. /api/main/data/profile/brianlevine
 PROFILE_PATH = '/data/profile/{username}'
 
-# The Former Gov WAF rejects non-browser User-Agents with HTTP 403, so every
+# The FormerGov WAF rejects non-browser User-Agents with HTTP 403, so every
 # request - both the requests-based facet lookups here and the Scrapy requests in
 # the spider - must present a browser UA. These are set per-request so they survive
 # the Apify-Scrapy integration overriding the project's USER_AGENT setting.

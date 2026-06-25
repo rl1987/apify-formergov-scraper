@@ -1,4 +1,4 @@
-"""Item pipelines for the Former Gov scraper.
+"""Item pipelines for the FormerGov scraper.
 
 For detailed information on creating and utilizing item pipelines, refer to the official documentation:
 http://doc.scrapy.org/en/latest/topics/item-pipeline.html
