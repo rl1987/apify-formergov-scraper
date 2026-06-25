@@ -26,12 +26,17 @@ SEARCH_PATH = '/data/profiles'
 # Full profile document, e.g. /api/main/data/profile/brianlevine
 PROFILE_PATH = '/data/profile/{username}'
 
-_REQUEST_HEADERS = {
+# The Former Gov WAF rejects non-browser User-Agents with HTTP 403, so every
+# request - both the requests-based facet lookups here and the Scrapy requests in
+# the spider - must present a browser UA. These are set per-request so they survive
+# the Apify-Scrapy integration overriding the project's USER_AGENT setting.
+BROWSER_HEADERS = {
     'User-Agent': (
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
         '(KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36'
     ),
     'Accept': 'application/json, text/plain, */*',
+    'Accept-Language': 'en-US,en;q=0.9',
     'Origin': SITE_BASE,
     'Referer': f'{SITE_BASE}/',
 }
@@ -106,7 +111,7 @@ def _fetch_meta_map(endpoint: str, key: str) -> dict[str, str]:
     resp = requests.get(
         f'{API_BASE}{endpoint}',
         params={'all': 'true'},
-        headers=_REQUEST_HEADERS,
+        headers=BROWSER_HEADERS,
         timeout=30,
     )
     resp.raise_for_status()
@@ -146,7 +151,7 @@ def _resolve_agency(value: str, jurisdiction: str | None, *, log: Any) -> str | 
         resp = requests.get(
             f'{API_BASE}/meta/agencies',
             params={'all': 'true', 'jurisdiction': jurisdiction},
-            headers=_REQUEST_HEADERS,
+            headers=BROWSER_HEADERS,
             timeout=30,
         )
         resp.raise_for_status()

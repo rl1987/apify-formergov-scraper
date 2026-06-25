@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 from scrapy import Request, Spider
 
-from ..formergov_api import profile_url, search_url
+from ..formergov_api import BROWSER_HEADERS, profile_url, search_url
 from ..items import ProfileItem
 from ..parsers import build_item_from_profile
 
@@ -67,13 +67,19 @@ class FormerGovSpider(Spider):
         params = dict(self.search_params or {})
         params['page'] = page
         params['pageSize'] = self.page_size
-        return Request(search_url(params), callback=self.parse_search, cb_kwargs={'page': page})
+        return Request(
+            search_url(params),
+            callback=self.parse_search,
+            headers=BROWSER_HEADERS,
+            cb_kwargs={'page': page},
+        )
 
     def _profile_request(self, username: str) -> Request:
         return Request(
             profile_url(username),
             callback=self.parse_profile,
             errback=self.on_profile_error,
+            headers=BROWSER_HEADERS,
             cb_kwargs={'username': username},
         )
 
@@ -123,7 +129,17 @@ class FormerGovSpider(Spider):
 
     def on_profile_error(self, failure: Any) -> None:
         username = failure.request.cb_kwargs.get('username', '?')
-        self.logger.warning('Profile API request failed for %s: %s', username, failure.value)
+        response = getattr(failure.value, 'response', None)
+        status = getattr(response, 'status', None)
+        if status is not None:
+            self.logger.warning(
+                'Profile %s failed after retries with HTTP %s. The Former Gov WAF may be '
+                'blocking this IP - try enabling/raising proxy (residential) in the input.',
+                username,
+                status,
+            )
+        else:
+            self.logger.warning('Profile API request failed for %s: %s', username, failure.value)
 
     @staticmethod
     def _now() -> str:
