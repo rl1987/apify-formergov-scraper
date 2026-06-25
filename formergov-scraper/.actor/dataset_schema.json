@@ -1,0 +1,57 @@
+{
+    "actorSpecification": 1,
+    "fields": {},
+    "views": {
+        "overview": {
+            "title": "Overview",
+            "transformation": {
+                "fields": [
+                    "fullName",
+                    "headline",
+                    "linkedinUrl",
+                    "websiteUrl",
+                    "email",
+                    "city",
+                    "state",
+                    "country",
+                    "currentTitle",
+                    "currentEmployer",
+                    "clearVerified",
+                    "profileUrl"
+                ]
+            },
+            "display": {
+                "component": "table",
+                "properties": {
+                    "fullName": { "label": "Name", "format": "text" },
+                    "headline": { "label": "Headline", "format": "text" },
+                    "linkedinUrl": { "label": "LinkedIn", "format": "link" },
+                    "websiteUrl": { "label": "Website", "format": "link" },
+                    "email": { "label": "Email", "format": "text" },
+                    "city": { "label": "City", "format": "text" },
+                    "state": { "label": "State", "format": "text" },
+                    "country": { "label": "Country", "format": "text" },
+                    "currentTitle": { "label": "Current title", "format": "text" },
+                    "currentEmployer": { "label": "Current employer", "format": "text" },
+                    "clearVerified": { "label": "CLEAR verified", "format": "boolean" },
+                    "profileUrl": { "label": "Profile", "format": "link" }
+                }
+            }
+        },
+        "contacts": {
+            "title": "Contacts",
+            "transformation": {
+                "fields": ["fullName", "linkedinUrl", "websiteUrl", "email"]
+            },
+            "display": {
+                "component": "table",
+                "properties": {
+                    "fullName": { "label": "Name", "format": "text" },
+                    "linkedinUrl": { "label": "LinkedIn", "format": "link" },
+                    "websiteUrl": { "label": "Website", "format": "link" },
+                    "email": { "label": "Email", "format": "text" }
+                }
+            }
+        }
+    }
+}

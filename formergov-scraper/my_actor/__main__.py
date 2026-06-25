@@ -5,7 +5,7 @@ logging system, and establishing the required environment to run the Scrapy spid
 
 This file is specifically designed to be executed when the project is run as an Apify Actor using `apify run` locally
 or being run on the Apify platform. It is not being executed when running the project as a Scrapy project using
-`scrapy crawl title_spider`.
+`scrapy crawl formergov`.
 
 We recommend you do not modify this file unless you really know what you are doing.
 """

@@ -3,3 +3,9 @@
 
 apify[scrapy] >= 3.3.0, < 4.0.0
 scrapy >= 2.14.0, < 3.0.0
+
+# Used by main.py to resolve advanced-search facet names into API ids.
+requests >= 2.32.0, < 3.0.0
+
+# Parses Next.js flight data on profile pages (fallback profile extractor).
+njsparser >= 2.16, < 3.0.0
