@@ -1,22 +1,16 @@
 """Helpers for talking to the FormerGov public JSON API.
 
 The site (https://formergov.com) is a Next.js front-end backed by a public,
-unauthenticated JSON API hosted at ``https://cdn.formergov.com/api``. This module
-centralises the endpoint URLs, builds the directory-search query string from the
-Actor input, and resolves human-readable facet names (practice areas, sectors,
-functions, agencies) into the UUIDs the search endpoint expects.
+unauthenticated JSON API hosted at ``https://cdn.formergov.com/api``. The site's
+``/directory`` search page carries every filter as a URL query parameter, and those
+parameters map 1:1 onto the search API. So the Actor takes the URL straight from the
+browser and forwards its query string to the API - no facet-name resolution needed.
 """
 
 from __future__ import annotations
 
-import re
-from typing import TYPE_CHECKING, Any
-from urllib.parse import urlencode
-
-import requests
-
-if TYPE_CHECKING:
-    from collections.abc import Iterable
+from typing import Any
+from urllib.parse import parse_qs, urlencode, urlparse
 
 API_BASE = 'https://cdn.formergov.com/api/main'
 SITE_BASE = 'https://formergov.com'
@@ -26,10 +20,9 @@ SEARCH_PATH = '/data/profiles'
 # Full profile document, e.g. /api/main/data/profile/brianlevine
 PROFILE_PATH = '/data/profile/{username}'
 
-# The FormerGov WAF rejects non-browser User-Agents with HTTP 403, so every
-# request - both the requests-based facet lookups here and the Scrapy requests in
-# the spider - must present a browser UA. These are set per-request so they survive
-# the Apify-Scrapy integration overriding the project's USER_AGENT setting.
+# The FormerGov WAF rejects non-browser User-Agents with HTTP 403, so every request
+# must present a browser UA. These are set per-request so they survive the
+# Apify-Scrapy integration overriding the project's USER_AGENT setting.
 BROWSER_HEADERS = {
     'User-Agent': (
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
@@ -41,53 +34,8 @@ BROWSER_HEADERS = {
     'Referer': f'{SITE_BASE}/',
 }
 
-_UUID_RE = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', re.IGNORECASE)
-
-# Meta endpoints that map facet name -> id. Each returns {"<key>": [{"id","name"}, ...]}.
-_META_ENDPOINTS = {
-    'practiceAreas': ('/meta/practice-areas', 'practiceAreas'),
-    'sectors': ('/meta/sectors', 'sectors'),
-    'functions': ('/meta/functions', 'functions'),
-}
-
-# Comma-joined multi-value search params (lists of UUIDs).
-_MULTI_FACETS = ('practiceAreas', 'sectors', 'functions')
-
-# Scalar string params passed straight through.
-_SCALAR_PARAMS = (
-    'text',
-    'employer',
-    'city',
-    'state',
-    'country',
-    'addressCity',
-    'addressState',
-    'addressCountry',
-    'positionType',
-    'jurisdiction',
-    'agency',
-    'district',
-    'openTo',
-)
-_INT_PARAMS = ('dateRange',)
-_BOOL_PARAMS = ('isGovernment', 'hasNoCurrentRoles')
-
-# Second-leg ("combined") parameters, accepted via the combinedFilters input object
-# (keys here are WITHOUT the "combined" prefix, which is added when building the query).
-_COMBINED_KEYS = (
-    'isGovernment',
-    'functions',
-    'employer',
-    'city',
-    'state',
-    'country',
-    'positionType',
-    'jurisdiction',
-    'agency',
-    'district',
-    'dateRange',
-    'hasNoCurrentRoles',
-)
+# Query params the spider controls itself; ignored when read off a pasted URL.
+_PAGINATION_PARAMS = ('page', 'pageSize')
 
 
 def profile_url(username: str) -> str:
@@ -106,142 +54,28 @@ def search_url(params: dict[str, Any]) -> str:
     return f'{API_BASE}{SEARCH_PATH}?{urlencode(query)}'
 
 
-def _fetch_meta_map(endpoint: str, key: str) -> dict[str, str]:
-    """Fetch a facet meta list and return a lowercased name -> id mapping."""
-    resp = requests.get(
-        f'{API_BASE}{endpoint}',
-        params={'all': 'true'},
-        headers=BROWSER_HEADERS,
-        timeout=30,
-    )
-    resp.raise_for_status()
-    items = resp.json().get(key, [])
-    return {str(item['name']).strip().lower(): item['id'] for item in items if item.get('name')}
+def search_params_from_url(url: str) -> dict[str, Any]:
+    """Extract directory-search query params from a formergov.com ``/directory`` URL.
 
-
-def _resolve_names(values: Iterable[str], name_to_id: dict[str, str], *, log: Any, label: str) -> list[str]:
-    """Map a list of facet names (or raw UUIDs) to UUIDs, skipping unknown names."""
-    resolved: list[str] = []
-    for raw in values:
-        value = str(raw).strip()
-        if not value:
-            continue
-        if _UUID_RE.match(value):
-            resolved.append(value)
-            continue
-        mapped = name_to_id.get(value.lower())
-        if mapped:
-            resolved.append(mapped)
-        else:
-            log.warning('Could not resolve %s value %r to an id; skipping.', label, value)
-    return resolved
-
-
-def _resolve_agency(value: str, jurisdiction: str | None, *, log: Any) -> str | None:
-    """Resolve an agency name to its id. Requires a jurisdiction; passes UUIDs through."""
-    value = str(value).strip()
-    if not value:
-        return None
-    if _UUID_RE.match(value):
-        return value
-    if not jurisdiction:
-        log.warning('agency %r given without a jurisdiction; cannot resolve name to id, skipping.', value)
-        return None
-    try:
-        resp = requests.get(
-            f'{API_BASE}/meta/agencies',
-            params={'all': 'true', 'jurisdiction': jurisdiction},
-            headers=BROWSER_HEADERS,
-            timeout=30,
-        )
-        resp.raise_for_status()
-        for item in resp.json().get('agencies', []):
-            if str(item.get('name', '')).strip().lower() == value.lower():
-                return item['id']
-    except requests.RequestException as exc:
-        log.warning('Failed to resolve agency %r: %s', value, exc)
-        return None
-    log.warning('Could not resolve agency %r in jurisdiction %s; skipping.', value, jurisdiction)
-    return None
-
-
-def build_search_params(actor_input: dict[str, Any], *, log: Any) -> dict[str, Any]:
-    """Translate raw Actor input into a resolved directory-search query param dict.
-
-    Facet names are resolved to UUIDs against the live meta endpoints. ``type`` is
-    always present (defaults to ``combined``). Unknown facet names are dropped with a
-    warning rather than failing the whole run.
+    The site already stores filters as UUIDs in the URL, so the query string is
+    forwarded verbatim to the search API. Pagination params are dropped (the spider
+    paginates), and ``type`` defaults to ``combined`` (the site's default) when absent.
+    Repeated values (``?sectors=a&sectors=b``) are comma-joined, matching the API.
+    A bare ``/directory`` or home-page URL yields just ``{'type': 'combined'}``, i.e.
+    an unfiltered search over the whole directory.
     """
-    params: dict[str, Any] = {'type': actor_input.get('searchType') or 'combined'}
-
-    # Resolve multi-value facet names -> comma-joined UUIDs.
-    meta_cache: dict[str, dict[str, str]] = {}
-    for facet in _MULTI_FACETS:
-        values = actor_input.get(facet)
-        if not values:
+    parsed = parse_qs(urlparse(url).query)
+    params: dict[str, Any] = {}
+    for key, values in parsed.items():
+        if key in _PAGINATION_PARAMS:
             continue
-        endpoint, key = _META_ENDPOINTS[facet]
-        try:
-            if facet not in meta_cache:
-                meta_cache[facet] = _fetch_meta_map(endpoint, key)
-            ids = _resolve_names(values, meta_cache[facet], log=log, label=facet)
-        except requests.RequestException as exc:
-            log.warning('Failed to fetch %s meta (%s); passing values through verbatim.', facet, exc)
-            ids = [str(v).strip() for v in values if str(v).strip()]
-        if ids:
-            params[facet] = ','.join(ids)
-
-    for name in _SCALAR_PARAMS:
-        value = actor_input.get(name)
-        if value not in (None, ''):
-            params[name] = str(value)
-
-    for name in _INT_PARAMS:
-        value = actor_input.get(name)
-        if value not in (None, ''):
-            params[name] = int(value)
-
-    for name in _BOOL_PARAMS:
-        value = actor_input.get(name)
-        if isinstance(value, bool):
-            params[name] = 'true' if value else 'false'
-        elif isinstance(value, str) and value.strip().lower() in ('true', 'false'):
-            params[name] = value.strip().lower()
-
-    # Resolve agency name -> id (needs jurisdiction).
-    if params.get('agency'):
-        resolved = _resolve_agency(params['agency'], params.get('jurisdiction'), log=log)
-        if resolved:
-            params['agency'] = resolved
-        else:
-            params.pop('agency', None)
-
-    # Second leg of a "combined" search.
-    combined = actor_input.get('combinedFilters') or {}
-    if combined:
-        for key in _COMBINED_KEYS:
-            value = combined.get(key)
-            if value in (None, ''):
-                continue
-            param_name = 'combined' + key[0].upper() + key[1:]
-            if key == 'functions':
-                try:
-                    fn_map = meta_cache.get('functions') or _fetch_meta_map(*_META_ENDPOINTS['functions'])
-                    meta_cache['functions'] = fn_map
-                    ids = _resolve_names(value if isinstance(value, list) else [value], fn_map, log=log, label='combined functions')
-                    if ids:
-                        params[param_name] = ','.join(ids)
-                except requests.RequestException:
-                    params[param_name] = ','.join(str(v) for v in (value if isinstance(value, list) else [value]))
-            elif isinstance(value, bool):
-                params[param_name] = 'true' if value else 'false'
-            else:
-                params[param_name] = str(value)
-
-    # Escape hatch: merge any raw params verbatim (future-proofing / power users).
-    extra = actor_input.get('extraSearchParams') or {}
-    for key, value in extra.items():
-        if value not in (None, ''):
-            params[key] = value
-
+        joined = ','.join(v for v in values if v)
+        if joined:
+            params[key] = joined
+    params.setdefault('type', 'combined')
     return params
+
+
+def is_unfiltered(params: dict[str, Any]) -> bool:
+    """True if the search has no filters beyond ``type`` (i.e. the whole directory)."""
+    return not any(key != 'type' for key in params)

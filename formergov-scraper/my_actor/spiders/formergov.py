@@ -84,7 +84,7 @@ class FormerGovSpider(Spider):
             yield self._search_request(page=1)
             return
 
-        self.logger.error('No searchType/filters and no usernames provided - nothing to scrape.')
+        self.logger.error('No search params and no usernames provided - nothing to scrape.')
 
     def _search_request(self, page: int) -> Request:
         params = dict(self.search_params or {})

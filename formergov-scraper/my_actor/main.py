@@ -1,9 +1,10 @@
 """Main entry point for the FormerGov directory Apify Actor.
 
-Reads the Actor input, resolves advanced-search facet names into the ids the API
-expects, and runs the Scrapy spider against the FormerGov public JSON API. The
-Apify-Scrapy integration (custom scheduler, dataset item pipeline, proxy handling)
-is applied via ``apply_apify_settings``.
+Reads the Actor input - a list of formergov.com URLs - and runs the Scrapy spider
+against the FormerGov public JSON API. Each URL is classified as either an individual
+profile page (scraped directly) or a directory search / home page (whose query string
+is forwarded to the search API). The Apify-Scrapy integration (custom scheduler,
+dataset item pipeline, proxy handling) is applied via ``apply_apify_settings``.
 
 For an in-depth description of the Apify-Scrapy integration, see:
 https://docs.apify.com/cli/docs/integrating-scrapy
@@ -11,44 +12,57 @@ https://docs.apify.com/cli/docs/integrating-scrapy
 
 from __future__ import annotations
 
-import asyncio
+from typing import Any
 from urllib.parse import urlparse
 
 from apify import Actor
 from apify.scrapy import apply_apify_settings
 from scrapy.crawler import AsyncCrawlerRunner
 
-from .formergov_api import build_search_params
+from .formergov_api import is_unfiltered, search_params_from_url
 from .spiders import FormerGovSpider as Spider
 
+# Page size for filtered searches; bumped to the API max for whole-directory runs to
+# minimise the number of (proxied) requests.
+DEFAULT_PAGE_SIZE = 100
+UNFILTERED_PAGE_SIZE = 1000
 
-def _usernames_from_input(actor_input: dict) -> list[str]:
-    """Collect explicit usernames and any profile URLs given as start URLs."""
-    usernames: list[str] = []
-    for username in actor_input.get('profileUsernames') or []:
-        username = str(username).strip().strip('/')
-        if username:
-            usernames.append(username.rsplit('/', 1)[-1])
 
+def _start_urls(actor_input: dict) -> list[str]:
+    """Normalise the startUrls input (list of strings or {"url": ...} objects)."""
+    urls: list[str] = []
     for entry in actor_input.get('startUrls') or []:
         url = entry.get('url') if isinstance(entry, dict) else entry
-        if not url:
-            continue
-        path = urlparse(str(url)).path.strip('/')
-        # Expect .../directory/<username>
-        if 'directory/' in path:
+        if url:
+            urls.append(str(url).strip())
+    return urls
+
+
+def _classify_urls(urls: list[str]) -> tuple[list[str], dict[str, Any] | None]:
+    """Split the input URLs into direct profile usernames and a single search.
+
+    A ``/directory/<username>`` URL is a profile to scrape directly; anything else
+    (``/directory?...``, a bare ``/directory``, or the home page) is a search whose
+    query string drives the directory search. Profile URLs take precedence: if any are
+    given, only those are scraped. Otherwise the first search URL is used.
+    """
+    usernames: list[str] = []
+    search_params: dict[str, Any] | None = None
+
+    for url in urls:
+        path = urlparse(url).path.strip('/')
+        if path.startswith('directory/'):
             slug = path.split('directory/', 1)[1].split('/', 1)[0]
             if slug:
                 usernames.append(slug)
+                continue
+        if search_params is None:
+            search_params = search_params_from_url(url)
 
-    # De-duplicate, preserving order.
+    # De-duplicate usernames, preserving order.
     seen: set[str] = set()
-    unique: list[str] = []
-    for username in usernames:
-        if username not in seen:
-            seen.add(username)
-            unique.append(username)
-    return unique
+    unique = [u for u in usernames if not (u in seen or seen.add(u))]
+    return unique, search_params
 
 
 async def main() -> None:
@@ -56,29 +70,29 @@ async def main() -> None:
     async with Actor:
         actor_input = await Actor.get_input() or {}
 
-        usernames = _usernames_from_input(actor_input)
+        urls = _start_urls(actor_input)
+        if not urls:
+            Actor.log.error('No startUrls provided - give at least one formergov.com URL to scrape.')
+            return
+
+        usernames, search_params = _classify_urls(urls)
         max_items = int(actor_input.get('maxItems') or 0)
-        page_size = int(actor_input.get('pageSize') or 100)
-        scrape_all = bool(actor_input.get('scrapeEntireDirectory'))
+        page_size = DEFAULT_PAGE_SIZE
         proxy_config = actor_input.get('proxyConfiguration')
 
-        search_params = None
-        if scrape_all:
-            # Whole directory: unfiltered search of the chosen type ('combined' = all
-            # profiles). Ignore filters, usernames and any maxItems cap; use the max page
-            # size to minimise the number of (proxied) requests.
-            usernames = []
-            search_params = {'type': actor_input.get('searchType') or 'combined'}
-            page_size = 1000
-            max_items = 0
-            Actor.log.info('Scraping entire directory (type=%s, no item cap).', search_params['type'])
-        elif usernames:
-            Actor.log.info('Direct mode: scraping %d profile(s) by username.', len(usernames))
+        if usernames:
+            # Direct mode: any profile URLs given win over a search URL.
+            search_params = None
+            Actor.log.info('Direct mode: scraping %d profile(s) by URL.', len(usernames))
+        elif search_params is not None:
+            if is_unfiltered(search_params):
+                page_size = UNFILTERED_PAGE_SIZE
+                Actor.log.info('Scraping entire directory (type=%s).', search_params['type'])
+            else:
+                Actor.log.info('Directory search params: %s', search_params)
         else:
-            # Directory search. Facet name resolution makes blocking HTTP calls to the
-            # meta endpoints; run them off the loop.
-            search_params = await asyncio.to_thread(build_search_params, actor_input, log=Actor.log)
-            Actor.log.info('Directory search params: %s', search_params)
+            Actor.log.error('Could not derive anything to scrape from the given URLs.')
+            return
 
         settings = apply_apify_settings(proxy_config=proxy_config)
         crawler_runner = AsyncCrawlerRunner(settings)

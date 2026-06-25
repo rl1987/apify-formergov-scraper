@@ -18,52 +18,33 @@ It talks directly to FormerGov's public JSON API, so it is fast and reliable. Th
 
 ## How to use FormerGov Directory Scraper
 
-1. Open the Actor in Apify Console and go to the **Input** tab.
-2. Pick a **Search type** (Combined, Current, or Former roles) and add any filters you want — e.g. set **Practice areas** to `Cybersecurity` and **Jurisdiction** to `Federal`. Leave filters empty to scrape the whole directory.
-3. (Optional) Set **Max profiles** to cap the run, and configure **Proxy**.
-4. Click **Start**. When the run finishes, open the **Output** tab and export the data as JSON, CSV, Excel, or HTML.
+1. On [formergov.com/directory](https://formergov.com/directory), use the advanced search to pick the filters you want (search type, practice areas, sectors, jurisdiction, …). The page updates the URL as you go.
+2. Copy the URL from your browser's address bar.
+3. Open the Actor in Apify Console, go to the **Input** tab, and paste that URL into **FormerGov URLs**.
+4. (Optional) Set **Max profiles** to cap the run, and configure **Proxy**.
+5. Click **Start**. When the run finishes, open the **Output** tab and export the data as JSON, CSV, Excel, or HTML.
 
-> Tip: to scrape only specific people, skip the filters and put their usernames (or profile URLs) in **Specific usernames** / **Profile URLs**.
+> Tip: paste `https://formergov.com` (or a bare `https://formergov.com/directory`) to scrape the **entire directory**, or paste individual profile URLs like `https://formergov.com/directory/brianlevine` to scrape just those people.
 
 ## Input
 
-Configure the run on the Actor's **Input** tab or via the API. All search filters are optional and map 1:1 to the site's advanced search.
+The Actor takes a single field: a list of FormerGov URLs copied straight from your browser. No need to look up internal ids — the site already encodes every filter in the URL.
 
 | Field | Type | Description |
 |---|---|---|
-| `searchType` | select | `combined`, `current`, or `former` (default `combined`). |
-| `scrapeEntireDirectory` | boolean | Scrape every profile, ignoring filters, usernames, and the `maxItems` cap. |
-| `text` | string | Free-text keyword search. |
-| `practiceAreas` | string list | Practice-area names (e.g. `Cybersecurity`, `Corporate Law`). |
-| `sectors` | string list | Sector names (e.g. `Legal`, `Technology`). |
-| `functions` | string list | Function/role-category names. |
-| `employer` | string | Employer name. |
-| `jurisdiction` | select | `FEDERAL`, `STATE`, `LOCAL`, `FOREIGN`. |
-| `positionType` | select | `APPOINTED`, `ELECTED`, `CIVIL_SERVICE`, `MILITARY`. |
-| `agency` | string | Agency name (set `jurisdiction` too so names resolve) or id. |
-| `district` | string | District, where applicable. |
-| `isGovernment` | select | Restrict to government roles (Any/Yes/No). |
-| `hasNoCurrentRoles` | select | Restrict to people with no current role (Any/Yes/No). |
-| `city` / `state` / `country` | string | Location filters. |
-| `openTo` | string | What the person is open to (board work, speaking, …). |
-| `combinedFilters` | object | Second-leg filters for a Combined search (advanced). |
-| `extraSearchParams` | object | Raw query params merged verbatim (escape hatch). |
-| `profileUsernames` | string list | Scrape these usernames directly, skipping search. |
-| `startUrls` | request list | Profile page URLs to scrape directly. |
+| `startUrls` | request list | FormerGov URLs to scrape. Each URL is one of: a **directory search URL** (e.g. `https://formergov.com/directory?type=combined&sectors=<uuid>`) whose filters drive the search; the **home page** `https://formergov.com` (or a bare `/directory`) to scrape the whole directory; or an **individual profile URL** `https://formergov.com/directory/<username>`. `page`/`pageSize` in the URL are ignored — the Actor paginates for you. |
 | `maxItems` | integer | Max profiles to scrape (0 = no limit). |
-| `pageSize` | integer | Results per search page (1–1000). |
 | `proxyConfiguration` | object | Proxy settings. Defaults to Apify Proxy (datacenter). If you see persistent `HTTP 403`, switch to **residential** groups. |
 
-Names for `practiceAreas`, `sectors`, `functions`, and `agency` are resolved to the directory's internal ids automatically; unrecognized names are skipped with a warning. You may also pass raw UUIDs.
+If any individual profile URLs are present, only those are scraped (the search URL is ignored).
 
 ### Example input
 
 ```json
 {
-  "searchType": "former",
-  "jurisdiction": "FEDERAL",
-  "practiceAreas": ["Cybersecurity"],
-  "text": "privacy",
+  "startUrls": [
+    { "url": "https://formergov.com/directory?type=combined&practiceAreas=1e01b018-bd8a-4c1b-857d-3f93d613935a&sectors=e97b9d61-7fd5-4565-8ca5-8f4d5a9dd56e" }
+  ],
   "maxItems": 200
 }
 ```
@@ -125,9 +106,8 @@ This Actor is **pay per result**: you are charged **US$0.0015 per profile** deli
 
 ## Tips and advanced options
 
-- **Whole directory**: enable **Scrape entire directory** (it ignores filters and the Max profiles cap, and uses the maximum page size). `searchType` = `combined` covers every profile.
-- **Combined searches**: set `searchType` to `combined` and use `combinedFilters` for the second role leg (e.g. current law-firm role + former federal role).
-- **Future-proofing**: any filter not exposed in the form can be passed through `extraSearchParams`.
+- **Whole directory**: paste `https://formergov.com` (or a bare `https://formergov.com/directory`) — an unfiltered `type=combined` search that covers every profile (~2,500).
+- **Any filter**: anything the site's advanced search can express ends up in the URL (search type, practice areas, sectors, functions, jurisdiction, agency, combined second-leg filters, free text, …), so it works automatically — just build the search on formergov.com and copy the URL.
 - **Search result ceiling**: a single search returns at most **10,000** results (the backend's pagination window). The full directory is well under that, but for a filtered search exceeding 10,000, split it into narrower queries (e.g. by jurisdiction, sector, or state) to reach everything. The Actor logs a warning when a search exceeds this ceiling.
 - **Missing & blocked profiles**: some directory usernames have no public profile (HTTP 404) and are skipped. Profiles blocked by a temporary IP block (HTTP 403) are automatically retried at the end of the run, so transient blocks don't drop them. The run's final log line reports how many were scraped, not-found, and permanently failed.
 - **403 errors**: FormerGov has anti-bot protection that primarily blocks non-browser requests, which the Actor handles by sending browser headers, pacing requests (AutoThrottle), and retrying blocked requests on a fresh IP. Some datacenter IPs can also be rejected by reputation; if you see **persistent** `HTTP 403` warnings, switch the proxy to **residential** groups in the input.
