@@ -1,26 +1,31 @@
-"""Scrapy item pipelines module.
-
-Module defines Scrapy item pipelines for scraped data. Item pipelines are processing components
-that handle the scraped items, typically used for cleaning, validating, and persisting data.
+"""Item pipelines for the Former Gov scraper.
 
 For detailed information on creating and utilizing item pipelines, refer to the official documentation:
 http://doc.scrapy.org/en/latest/topics/item-pipeline.html
 """
-# ruff: noqa: ARG002, D102
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from scrapy.exceptions import DropItem
+
 if TYPE_CHECKING:
     from scrapy import Spider
 
-    from .items import TitleItem
+    from .items import ProfileItem
 
 
-class TitleItemPipeline:
-    """Define processing steps for `TitleItem` objects scraped by spiders."""
+class ProfileDedupPipeline:
+    """Drop duplicate profiles (the same username can surface across search pages)."""
 
-    def process_item(self, item: TitleItem, spider: Spider) -> TitleItem:
-        # Do something with the item here, such as cleaning it or persisting it to a database
+    def __init__(self) -> None:
+        self._seen: set[str] = set()
+
+    def process_item(self, item: ProfileItem, spider: Spider) -> ProfileItem:
+        username = item.get('username')
+        if username and username in self._seen:
+            raise DropItem(f'Duplicate profile: {username}')
+        if username:
+            self._seen.add(username)
         return item

@@ -2,14 +2,17 @@
 	"$schema": "https://apify.com/schemas/v1/actor.ide.json",
 	"actorSpecification": 1,
 	"name": "formergov-scraper",
-	"title": "Getting started with Python and Scrapy",
-	"description": "Scrapes titles of websites using Scrapy.",
-	"version": "0.0",
+	"title": "Former Gov Directory Scraper",
+	"description": "Scrapes the formergov.com directory of former government and military professionals, with contact info (LinkedIn, website, email) and full advanced-search filtering.",
+	"version": "0.1",
 	"buildTag": "latest",
 	"meta": {
 		"templateId": "python-scrapy",
-		"generatedBy": "<FILL-IN-MODEL>"
+		"generatedBy": "Claude Code with Claude Opus 4.8"
 	},
 	"input": "./input_schema.json",
+	"storages": {
+		"dataset": "./dataset_schema.json"
+	},
 	"dockerfile": "../Dockerfile"
 }

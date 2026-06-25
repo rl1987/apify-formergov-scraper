@@ -7,6 +7,6 @@ For detailed information on creating and utilizing spiders, refer to the officia
 https://docs.scrapy.org/en/latest/topics/spiders.html
 """
 
-from .title import TitleSpider
+from .formergov import FormerGovSpider
 
-__all__ = ['TitleSpider']
+__all__ = ['FormerGovSpider']

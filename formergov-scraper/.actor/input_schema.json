@@ -1,46 +1,188 @@
 {
     "$schema": "https://apify.com/schemas/v1/input.ide.json",
-    "title": "Python Scrapy scraper",
+    "title": "Former Gov Directory Scraper",
     "type": "object",
     "schemaVersion": 1,
     "properties": {
-        "startUrls": {
-            "title": "Start URLs",
-            "type": "array",
-            "description": "URLs to start with",
-            "editor": "requestListSources",
-            "prefill": [
-                {
-                    "url": "https://apify.com/"
-                }
-            ],
-            "default": [
-                {
-                    "url": "https://apify.com/"
-                }
-            ]
+        "searchType": {
+            "title": "Search type",
+            "type": "string",
+            "description": "Which roles to search against, mirroring the directory's advanced search. 'current' = people by their current role, 'former' = by a former (e.g. government) role, 'combined' = match both a current and a former role.",
+            "editor": "select",
+            "enum": ["combined", "current", "former"],
+            "enumTitles": ["Combined (current + former)", "Current roles", "Former roles"],
+            "default": "combined"
         },
-        "allowedDomains": {
-            "title": "Allowed domains",
+        "text": {
+            "title": "Keyword / free text",
+            "type": "string",
+            "description": "Full-text search across profiles (name, headline, biography, roles).",
+            "editor": "textfield",
+            "sectionCaption": "Search filters",
+            "sectionDescription": "All filters are optional and mirror the formergov.com advanced search. Multi-value fields accept human-readable names (resolved to ids automatically) or raw UUIDs."
+        },
+        "practiceAreas": {
+            "title": "Practice areas",
             "type": "array",
-            "description": "Domains that the scraper is allowed to crawl.",
+            "description": "Practice-area names (e.g. \"Cybersecurity\", \"Corporate Law\"). Resolved to ids via the directory's meta endpoint.",
+            "editor": "stringList"
+        },
+        "sectors": {
+            "title": "Sectors",
+            "type": "array",
+            "description": "Sector names (e.g. \"Legal\", \"Technology\", \"Public Services\").",
+            "editor": "stringList"
+        },
+        "functions": {
+            "title": "Functions",
+            "type": "array",
+            "description": "Function / role-category names (e.g. \"Cybersecurity\", \"Data Privacy\").",
+            "editor": "stringList"
+        },
+        "employer": {
+            "title": "Employer",
+            "type": "string",
+            "description": "Filter by employer name.",
+            "editor": "textfield"
+        },
+        "jurisdiction": {
+            "title": "Jurisdiction",
+            "type": "string",
+            "description": "Government jurisdiction of the role.",
+            "editor": "select",
+            "enum": ["", "FEDERAL", "STATE", "LOCAL", "FOREIGN"],
+            "enumTitles": ["Any", "Federal", "State", "Local", "Foreign"],
+            "default": ""
+        },
+        "positionType": {
+            "title": "Position type",
+            "type": "string",
+            "description": "Type of government position.",
+            "editor": "select",
+            "enum": ["", "APPOINTED", "ELECTED", "CIVIL_SERVICE", "MILITARY"],
+            "enumTitles": ["Any", "Appointed", "Elected", "Civil service", "Military"],
+            "default": ""
+        },
+        "agency": {
+            "title": "Agency",
+            "type": "string",
+            "description": "Agency name or id. To resolve a name to an id, also set Jurisdiction (the directory keys agencies by jurisdiction).",
+            "editor": "textfield"
+        },
+        "district": {
+            "title": "District",
+            "type": "string",
+            "description": "District (for agencies that require one).",
+            "editor": "textfield"
+        },
+        "isGovernment": {
+            "title": "Government role only",
+            "type": "string",
+            "description": "Restrict to government roles.",
+            "editor": "select",
+            "enum": ["", "true", "false"],
+            "enumTitles": ["Any", "Yes", "No"],
+            "default": ""
+        },
+        "hasNoCurrentRoles": {
+            "title": "Has no current roles",
+            "type": "string",
+            "description": "Restrict to people with no current role listed.",
+            "editor": "select",
+            "enum": ["", "true", "false"],
+            "enumTitles": ["Any", "Yes", "No"],
+            "default": ""
+        },
+        "city": {
+            "title": "City",
+            "type": "string",
+            "editor": "textfield",
+            "description": "Filter by city."
+        },
+        "state": {
+            "title": "State",
+            "type": "string",
+            "editor": "textfield",
+            "description": "Filter by state."
+        },
+        "country": {
+            "title": "Country",
+            "type": "string",
+            "editor": "textfield",
+            "description": "Filter by country."
+        },
+        "openTo": {
+            "title": "Open to",
+            "type": "string",
+            "editor": "textfield",
+            "description": "Filter by what the person is open to (e.g. board opportunities, speaking)."
+        },
+        "dateRange": {
+            "title": "Date range",
+            "type": "integer",
+            "editor": "number",
+            "description": "Date-range filter value as used by the advanced search (advanced)."
+        },
+        "combinedFilters": {
+            "title": "Combined search - second leg",
+            "type": "object",
+            "description": "Only used when Search type = Combined. Filters for the SECOND role leg. Keys (no 'combined' prefix): functions, employer, city, state, country, positionType, jurisdiction, agency, district, isGovernment, dateRange, hasNoCurrentRoles. Example: {\"jurisdiction\": \"FEDERAL\", \"functions\": [\"Cybersecurity\"]}",
             "editor": "json",
-            "prefill": ["apify.com"],
-            "default": ["apify.com"]
+            "sectionCaption": "Advanced",
+            "sectionDescription": "Power-user options for full parity with the site's advanced search."
+        },
+        "extraSearchParams": {
+            "title": "Extra raw search params",
+            "type": "object",
+            "description": "Raw query parameters merged verbatim into the search request. Escape hatch for any filter not exposed above. Example: {\"score\": \"1\"}",
+            "editor": "json"
+        },
+        "profileUsernames": {
+            "title": "Specific usernames",
+            "type": "array",
+            "description": "Scrape these directory usernames directly and skip search entirely (e.g. \"brianlevine\"). Also accepts full profile URLs.",
+            "editor": "stringList",
+            "sectionCaption": "Direct profiles (optional)",
+            "sectionDescription": "If set, search filters above are ignored and only these profiles are scraped."
+        },
+        "startUrls": {
+            "title": "Profile URLs",
+            "type": "array",
+            "description": "Profile page URLs like https://formergov.com/directory/brianlevine. Scraped directly (search is skipped if any are provided).",
+            "editor": "requestListSources"
+        },
+        "maxItems": {
+            "title": "Max profiles",
+            "type": "integer",
+            "description": "Maximum number of profiles to scrape (0 = no limit). Note: deep pagination on the search API is windowed, so very large limits may not reach every result in one run.",
+            "editor": "number",
+            "default": 1000,
+            "minimum": 0,
+            "sectionCaption": "Limits & runtime"
+        },
+        "pageSize": {
+            "title": "Search page size",
+            "type": "integer",
+            "description": "Results requested per search page (1-1000).",
+            "editor": "number",
+            "default": 100,
+            "minimum": 1,
+            "maximum": 1000
+        },
+        "useNjsparserFallback": {
+            "title": "Use njsparser page fallback",
+            "type": "boolean",
+            "description": "If a profile's JSON API call fails, fall back to parsing the Next.js page with njsparser to recover contact info.",
+            "default": true
         },
         "proxyConfiguration": {
-            "sectionCaption": "Proxy and HTTP configuration",
             "title": "Proxy configuration",
             "type": "object",
-            "description": "Specifies proxy servers that will be used by the scraper in order to hide its origin.",
+            "description": "Proxy servers used by the scraper. Apify Proxy (datacenter) is sufficient for this API.",
             "editor": "proxy",
-            "prefill": {
-                "useApifyProxy": true
-            },
-            "default": {
-                "useApifyProxy": true
-            }
+            "prefill": { "useApifyProxy": true },
+            "default": { "useApifyProxy": true }
         }
     },
-    "required": ["startUrls"]
+    "required": []
 }

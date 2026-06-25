@@ -1,50 +1,83 @@
-"""Module defines the main entry point for the Apify Actor.
+"""Main entry point for the Former Gov directory Apify Actor.
 
-Module defines the main coroutine for the Apify Scrapy Actor, executed from the __main__.py file. The coroutine
-processes the Actor's input and executes the Scrapy spider. Additionally, it updates Scrapy project settings by
-applying Apify-related settings. Which includes adding a custom scheduler, retry middleware, and an item pipeline
-for pushing data to the Apify dataset.
+Reads the Actor input, resolves advanced-search facet names into the ids the API
+expects, and runs the Scrapy spider against the Former Gov public JSON API. The
+Apify-Scrapy integration (custom scheduler, dataset item pipeline, proxy handling)
+is applied via ``apply_apify_settings``.
 
-Customization:
---------------
-
-Feel free to customize this file to add specific functionality to the Actor, such as incorporating your own Scrapy
-components like spiders and handling Actor input. However, make sure you have a clear understanding of your
-modifications. For instance, removing `apply_apify_settings` break the integration between Scrapy and Apify.
-
-Documentation:
---------------
-
-For an in-depth description of the Apify-Scrapy integration process, our Scrapy components, known limitations and
-other stuff, please refer to the following documentation page: https://docs.apify.com/cli/docs/integrating-scrapy.
+For an in-depth description of the Apify-Scrapy integration, see:
+https://docs.apify.com/cli/docs/integrating-scrapy
 """
 
 from __future__ import annotations
+
+import asyncio
+from urllib.parse import urlparse
 
 from apify import Actor
 from apify.scrapy import apply_apify_settings
 from scrapy.crawler import AsyncCrawlerRunner
 
-# Import your Scrapy spider here.
-from .spiders import TitleSpider as Spider
+from .formergov_api import build_search_params
+from .spiders import FormerGovSpider as Spider
+
+
+def _usernames_from_input(actor_input: dict) -> list[str]:
+    """Collect explicit usernames and any profile URLs given as start URLs."""
+    usernames: list[str] = []
+    for username in actor_input.get('profileUsernames') or []:
+        username = str(username).strip().strip('/')
+        if username:
+            usernames.append(username.rsplit('/', 1)[-1])
+
+    for entry in actor_input.get('startUrls') or []:
+        url = entry.get('url') if isinstance(entry, dict) else entry
+        if not url:
+            continue
+        path = urlparse(str(url)).path.strip('/')
+        # Expect .../directory/<username>
+        if 'directory/' in path:
+            slug = path.split('directory/', 1)[1].split('/', 1)[0]
+            if slug:
+                usernames.append(slug)
+
+    # De-duplicate, preserving order.
+    seen: set[str] = set()
+    unique: list[str] = []
+    for username in usernames:
+        if username not in seen:
+            seen.add(username)
+            unique.append(username)
+    return unique
 
 
 async def main() -> None:
-    """Apify Actor main coroutine for executing the Scrapy spider."""
+    """Apify Actor main coroutine for executing the Former Gov Scrapy spider."""
     async with Actor:
-        # Retrieve and process Actor input.
         actor_input = await Actor.get_input() or {}
-        start_urls = [url['url'] for url in actor_input.get('startUrls', [])]
-        allowed_domains = actor_input.get('allowedDomains')
+
+        usernames = _usernames_from_input(actor_input)
+        max_items = int(actor_input.get('maxItems') or 0)
+        page_size = int(actor_input.get('pageSize') or 100)
+        use_fallback = actor_input.get('useNjsparserFallback', True)
         proxy_config = actor_input.get('proxyConfiguration')
 
-        # Apply Apify settings, which will override the Scrapy project settings.
-        settings = apply_apify_settings(proxy_config=proxy_config)
+        search_params = None
+        if not usernames:
+            # No explicit profiles -> run a directory search. Facet name resolution
+            # makes blocking HTTP calls to the meta endpoints; run them off the loop.
+            search_params = await asyncio.to_thread(build_search_params, actor_input, log=Actor.log)
+            Actor.log.info('Directory search params: %s', search_params)
+        else:
+            Actor.log.info('Direct mode: scraping %d profile(s) by username.', len(usernames))
 
-        # Create AsyncCrawlerRunner and execute the Scrapy spider.
+        settings = apply_apify_settings(proxy_config=proxy_config)
         crawler_runner = AsyncCrawlerRunner(settings)
         await crawler_runner.crawl(
             Spider,
-            start_urls=start_urls,
-            allowed_domains=allowed_domains,
+            search_params=search_params,
+            usernames=usernames,
+            max_items=max_items,
+            page_size=page_size,
+            use_fallback=use_fallback,
         )
