@@ -121,7 +121,7 @@ Each dataset item is one person. You can download the dataset in various formats
 
 ## How much does it cost to scrape FormerGov?
 
-This Actor is **pay per result**: you are charged **US$1.50 per profile** delivered to the dataset (US$1,500 per 1,000 profiles). You only pay for unique profiles actually returned — duplicates, not-found (404) profiles, and failed requests are not billed. Set **Max profiles** (`maxItems`) to cap how many rows — and therefore how much — a run can produce, and set your run's max-charge limit in the Console to stay within budget.
+This Actor is **pay per result**: you are charged **US$0.0015 per profile** delivered to the dataset (US$1.50 per 1,000 profiles). You only pay for unique profiles actually returned — duplicates, not-found (404) profiles, and failed requests are not billed. For example, scraping the entire directory (~2,500 profiles) costs about **US$3.75**. Set **Max profiles** (`maxItems`) to cap how many rows a run can produce, and set your run's max-charge limit in the Console to stay within budget.
 
 ## Tips and advanced options
 
