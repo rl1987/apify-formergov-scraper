@@ -29,7 +29,6 @@ class ProfileItem(Item):
     # Contact info (the headline output of this Actor)
     linkedinUrl = Field()
     websiteUrl = Field()
-    email = Field()
     websites = Field()  # full list of {name, url}
 
     # Professional context

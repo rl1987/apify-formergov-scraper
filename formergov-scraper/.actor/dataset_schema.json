@@ -10,7 +10,6 @@
                     "headline",
                     "linkedinUrl",
                     "websiteUrl",
-                    "email",
                     "city",
                     "state",
                     "country",
@@ -27,7 +26,6 @@
                     "headline": { "label": "Headline", "format": "text" },
                     "linkedinUrl": { "label": "LinkedIn", "format": "link" },
                     "websiteUrl": { "label": "Website", "format": "link" },
-                    "email": { "label": "Email", "format": "text" },
                     "city": { "label": "City", "format": "text" },
                     "state": { "label": "State", "format": "text" },
                     "country": { "label": "Country", "format": "text" },
@@ -41,15 +39,14 @@
         "contacts": {
             "title": "Contacts",
             "transformation": {
-                "fields": ["fullName", "linkedinUrl", "websiteUrl", "email"]
+                "fields": ["fullName", "linkedinUrl", "websiteUrl"]
             },
             "display": {
                 "component": "table",
                 "properties": {
                     "fullName": { "label": "Name", "format": "text" },
                     "linkedinUrl": { "label": "LinkedIn", "format": "link" },
-                    "websiteUrl": { "label": "Website", "format": "link" },
-                    "email": { "label": "Email", "format": "text" }
+                    "websiteUrl": { "label": "Website", "format": "link" }
                 }
             }
         }

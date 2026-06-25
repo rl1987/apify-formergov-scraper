@@ -3,7 +3,7 @@
 	"actorSpecification": 1,
 	"name": "formergov-scraper",
 	"title": "Former Gov Directory Scraper",
-	"description": "Scrapes the formergov.com directory of former government and military professionals, with contact info (LinkedIn, website, email) and full advanced-search filtering.",
+	"description": "Scrapes the formergov.com directory of former government and military professionals, with contact info (LinkedIn, website) and full advanced-search filtering.",
 	"version": "0.1",
 	"buildTag": "latest",
 	"defaultRunOptions": {

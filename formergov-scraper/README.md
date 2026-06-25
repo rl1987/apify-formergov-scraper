@@ -1,10 +1,10 @@
 # Former Gov Directory Scraper
 
-**Extract former government and military professionals from the [Former Gov](https://formergov.com) directory — with their contact info (LinkedIn profile, website, and email when public) and full professional background.** Mirror the site's advanced search with structured filters, or pull specific profiles by username. Built with Scrapy on the Apify platform, so you get scheduling, a versioned API, integrations, proxy rotation, and run monitoring out of the box.
+**Extract former government and military professionals from the [Former Gov](https://formergov.com) directory — with their contact info (LinkedIn profile and website) and full professional background.** Mirror the site's advanced search with structured filters, or pull specific profiles by username. Built with Scrapy on the Apify platform, so you get scheduling, a versioned API, integrations, proxy rotation, and run monitoring out of the box.
 
 ## What does Former Gov Directory Scraper do?
 
-[Former Gov](https://formergov.com) is an apolitical directory that connects former federal, state, local, tribal, and foreign government and military professionals with people who need their expertise. This Actor turns that directory into structured data: for every matching person it returns their name, headline, location, employment history, sectors, practice areas, and — most importantly — their **contact points**: LinkedIn profile URL, personal/employer website, and email address when it appears in their public profile.
+[Former Gov](https://formergov.com) is an apolitical directory that connects former federal, state, local, tribal, and foreign government and military professionals with people who need their expertise. This Actor turns that directory into structured data: for every matching person it returns their name, headline, location, employment history, sectors, practice areas, and — most importantly — their **contact points**: LinkedIn profile URL and personal/employer website.
 
 It talks directly to Former Gov's public JSON API, so it is fast and reliable. The same advanced-search filters available on the website (keyword, practice areas, sectors, functions, jurisdiction, position type, agency, location, and more) are exposed as Actor input, so you can target exactly the people you care about.
 
@@ -14,7 +14,7 @@ It talks directly to Former Gov's public JSON API, so it is fast and reliable. T
 - **Recruiting & executive search** — find candidates with specific government or military backgrounds.
 - **Expert sourcing** — locate expert witnesses, board advisors, speakers, or media commentators.
 - **Research & due diligence** — map the post-government careers of professionals in a field.
-- **CRM enrichment** — append LinkedIn, website, and email contact points to existing records.
+- **CRM enrichment** — append LinkedIn and website contact points to existing records.
 
 ## How to use Former Gov Directory Scraper
 
@@ -85,7 +85,6 @@ Each dataset item is one person. You can download the dataset in various formats
   "country": "United States",
   "linkedinUrl": "https://www.linkedin.com/in/brian-levine-cyberlaw",
   "websiteUrl": "https://www.ey.com/en_us/people/brian-levine",
-  "email": null,
   "websites": [
     { "name": "LinkedIn", "url": "https://www.linkedin.com/in/brian-levine-cyberlaw" },
     { "name": "Employer", "url": "https://www.ey.com/en_us/people/brian-levine" }
@@ -111,7 +110,6 @@ Each dataset item is one person. You can download the dataset in various formats
 | `city`, `state`, `country` | Location. |
 | `linkedinUrl` | LinkedIn profile URL (contact). |
 | `websiteUrl` | Primary non-LinkedIn website (contact). |
-| `email` | Email address, when present in the public profile text. |
 | `websites` | Full list of `{name, url}` links on the profile. |
 | `clearVerified` | Whether the member is identity-verified via CLEAR. |
 | `currentTitle`, `currentEmployer` | Current role. |
@@ -136,7 +134,5 @@ The Actor uses lightweight HTTP requests (no headless browser), so it is inexpen
 ## FAQ, disclaimers, and support
 
 **Is scraping Former Gov legal?** This Actor collects only publicly available profile information that Former Gov members choose to publish in the public directory. You are responsible for using the data in compliance with Former Gov's Terms of Service, applicable laws (including data-protection rules such as GDPR/CCPA), and for respecting individuals' privacy. Do not use the data for spam or any unlawful purpose.
-
-**Email availability** — Former Gov has no dedicated email field; an email is only returned when a member includes one in their public biography text, so most rows will have `email: null`.
 
 **Found a bug or need a custom field?** Open an issue on the Actor's **Issues** tab. Custom scraping solutions can be arranged on request.

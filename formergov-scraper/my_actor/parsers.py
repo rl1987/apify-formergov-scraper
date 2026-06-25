@@ -12,7 +12,6 @@ from .formergov_api import profile_page_url
 
 CDN_IMAGE_BASE = 'https://cdn.formergov.com'
 
-_EMAIL_RE = re.compile(r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}')
 _LINKEDIN_PROFILE_RE = re.compile(r'linkedin\.com/(?:in|pub)/', re.IGNORECASE)
 
 
@@ -61,17 +60,6 @@ def classify_websites(websites: list[dict[str, Any]]) -> tuple[str | None, str |
     return linkedin_url, website_url, cleaned
 
 
-def extract_email(*texts: str) -> str | None:
-    """Return the first email address found across the given text blobs, if any."""
-    for text in texts:
-        if not text:
-            continue
-        match = _EMAIL_RE.search(text)
-        if match:
-            return match.group(0)
-    return None
-
-
 def _full_name(first: str, middle: str, last: str) -> str:
     return ' '.join(p for p in (first.strip(), middle.strip(), last.strip()) if p).strip()
 
@@ -94,8 +82,6 @@ def build_item_from_profile(data: dict[str, Any], username: str, scraped_at: str
     linkedin_url, website_url, websites = classify_websites(data.get('websites') or [])
 
     biography = rich_text_to_plain(data.get('biography'))
-    rep_matters = rich_text_to_plain(data.get('representativeMatters'))
-    email = extract_email(biography, rep_matters, data.get('headline') or '')
 
     roles = data.get('roles') or []
     current = next((r for r in roles if r.get('isCurrentRole')), None)
@@ -125,7 +111,6 @@ def build_item_from_profile(data: dict[str, Any], username: str, scraped_at: str
         'country': (address.get('country') or '').strip() or None,
         'linkedinUrl': linkedin_url,
         'websiteUrl': website_url,
-        'email': email,
         'websites': websites,
         'clearVerified': bool(data.get('clearVerified')),
         'currentTitle': (current.get('title') or '').strip() if current else None,
