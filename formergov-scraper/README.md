@@ -18,8 +18,8 @@ It talks directly to FormerGov's public JSON API, so it is fast and reliable. Th
 
 ## How to use FormerGov Directory Scraper
 
-1. On [formergov.com/directory](https://formergov.com/directory), use the advanced search to pick the filters you want (search type, practice areas, sectors, jurisdiction, …). The page updates the URL as you go.
-2. Copy the URL from your browser's address bar.
+1. On [formergov.com/directory](https://formergov.com/directory), enter a keyword and/or use **Advanced Search** to pick the filters you want (search type, practice areas, sectors, jurisdiction, …), then click **SEARCH**. The address bar now holds your search as a URL (e.g. `…/directory?type=combined&text=OSINT`).
+2. Copy that URL from your browser's address bar.
 3. Open the Actor in Apify Console, go to the **Input** tab, and paste that URL into **FormerGov URLs**.
 4. (Optional) Set **Max profiles** to cap the run, and configure **Proxy**.
 5. Click **Start**. When the run finishes, open the **Output** tab and export the data as JSON, CSV, Excel, or HTML.
