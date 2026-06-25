@@ -8,9 +8,9 @@ from typing import TYPE_CHECKING, Any
 
 from scrapy import Request, Spider
 
-from ..formergov_api import profile_page_url, profile_url, search_url
+from ..formergov_api import profile_url, search_url
 from ..items import ProfileItem
-from ..parsers import build_item_from_page, build_item_from_profile
+from ..parsers import build_item_from_profile
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Generator
@@ -35,7 +35,6 @@ class FormerGovSpider(Spider):
         usernames: list[str] | None = None,
         max_items: int = 0,
         page_size: int = 100,
-        use_fallback: bool = True,
         *args: Any,
         **kwargs: Any,
     ) -> None:
@@ -44,7 +43,6 @@ class FormerGovSpider(Spider):
         self.seed_usernames = usernames or []
         self.max_items = max_items or 0  # 0 == unlimited
         self.page_size = max(1, min(int(page_size or 100), 1000))
-        self.use_fallback = use_fallback
         self.enqueued_profiles = 0
 
     # -- request generation ------------------------------------------------------
@@ -110,47 +108,22 @@ class FormerGovSpider(Spider):
 
     # -- individual profiles -----------------------------------------------------
 
-    def parse_profile(self, response: Response, username: str) -> Generator[ProfileItem | Request, None, None]:
+    def parse_profile(self, response: Response, username: str) -> Generator[ProfileItem, None, None]:
         try:
             data = json.loads(response.text)
         except ValueError:
             data = None
 
         if not isinstance(data, dict) or not data:
-            yield from self._fallback_or_drop(username, reason='empty/invalid JSON')
+            self.logger.warning('Skipping %s: profile API returned empty/invalid JSON (HTTP %s).', username, response.status)
             return
 
         row = build_item_from_profile(data, username, self._now())
-        yield self._to_item(row)
+        yield ProfileItem(**row)
 
-    def on_profile_error(self, failure: Any) -> Generator[Request, None, None]:
+    def on_profile_error(self, failure: Any) -> None:
         username = failure.request.cb_kwargs.get('username', '?')
         self.logger.warning('Profile API request failed for %s: %s', username, failure.value)
-        yield from self._fallback_or_drop(username, reason=str(failure.value))
-
-    def _fallback_or_drop(self, username: str, reason: str) -> Generator[Request, None, None]:
-        if self.use_fallback:
-            self.logger.info('Falling back to page parsing for %s (%s).', username, reason)
-            yield Request(
-                profile_page_url(username),
-                callback=self.parse_profile_page,
-                dont_filter=True,
-                cb_kwargs={'username': username},
-            )
-        else:
-            self.logger.warning('Skipping %s: %s (fallback disabled).', username, reason)
-
-    def parse_profile_page(self, response: Response, username: str) -> Generator[ProfileItem, None, None]:
-        row = build_item_from_page(response.text, username, self._now())
-        if row:
-            yield self._to_item(row)
-        else:
-            self.logger.warning('Fallback page parsing yielded no data for %s.', username)
-
-    @staticmethod
-    def _to_item(row: dict[str, Any]) -> ProfileItem:
-        """Build a ProfileItem, keeping only declared fields (drops markers like _partial)."""
-        return ProfileItem(**{k: v for k, v in row.items() if k in ProfileItem.fields})
 
     @staticmethod
     def _now() -> str:

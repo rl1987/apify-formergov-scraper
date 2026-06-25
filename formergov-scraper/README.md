@@ -51,7 +51,6 @@ Configure the run on the Actor's **Input** tab or via the API. All search filter
 | `startUrls` | request list | Profile page URLs to scrape directly. |
 | `maxItems` | integer | Max profiles to scrape (0 = no limit). |
 | `pageSize` | integer | Results per search page (1–1000). |
-| `useNjsparserFallback` | boolean | If a profile's JSON API call fails, parse the Next.js page with `njsparser` to recover contact info. |
 | `proxyConfiguration` | object | Proxy settings (Apify Proxy datacenter is sufficient). |
 
 Names for `practiceAreas`, `sectors`, `functions`, and `agency` are resolved to the directory's internal ids automatically; unrecognized names are skipped with a warning. You may also pass raw UUIDs.

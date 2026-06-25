@@ -23,7 +23,5 @@ apify push           # deploy to the Apify platform
   search endpoint with the requested filters and paginates through results.
 - **Profiles** — fetches each matching profile's structured JSON and maps it to a flat
   output row (name, location, roles, sectors, practice areas, and contact links).
-- **Fallback** — if a profile's JSON API call fails, the Next.js page flight data is
-  parsed with [`njsparser`](https://pypi.org/project/njsparser/) to recover contact info.
 
 No login is required; only public directory data is collected.

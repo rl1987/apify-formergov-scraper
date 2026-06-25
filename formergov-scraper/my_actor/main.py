@@ -59,7 +59,6 @@ async def main() -> None:
         usernames = _usernames_from_input(actor_input)
         max_items = int(actor_input.get('maxItems') or 0)
         page_size = int(actor_input.get('pageSize') or 100)
-        use_fallback = actor_input.get('useNjsparserFallback', True)
         proxy_config = actor_input.get('proxyConfiguration')
 
         search_params = None
@@ -79,5 +78,4 @@ async def main() -> None:
             usernames=usernames,
             max_items=max_items,
             page_size=page_size,
-            use_fallback=use_fallback,
         )

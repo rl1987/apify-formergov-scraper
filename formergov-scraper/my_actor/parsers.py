@@ -1,13 +1,10 @@
 """Parse Former Gov profile data into output rows.
 
-Primary path: the clean profile JSON returned by ``cdn.formergov.com/api``.
-Fallback path: parse the Next.js flight data embedded in the public profile page
-HTML using ``njsparser`` (used only when the JSON API is unavailable for a profile).
+Profiles are read from the clean profile JSON returned by ``cdn.formergov.com/api``.
 """
 
 from __future__ import annotations
 
-import json
 import re
 from typing import Any
 
@@ -146,58 +143,4 @@ def build_item_from_profile(data: dict[str, Any], username: str, scraped_at: str
         'publications': data.get('publications') or [],
         'profilePicture': _profile_picture_url(data.get('profilePicture')),
         'scrapedAt': scraped_at,
-    }
-
-
-def build_item_from_page(html: str, username: str, scraped_at: str) -> dict[str, Any] | None:
-    """Fallback extractor: pull contact info from a profile page's Next.js flight data.
-
-    Uses njsparser to parse the ``self.__next_f.push`` flight data, then recovers the
-    contact hrefs (LinkedIn, website), name and biography text from the rendered tree.
-    Returns a partial row, or ``None`` if no flight data could be parsed.
-    """
-    import njsparser  # imported lazily so the primary path has no hard dependency at import time
-
-    fd = njsparser.BeautifulFD(html)
-    if not fd:
-        return None
-
-    blob = json.dumps(fd, default=njsparser.default)
-
-    # Recover the LinkedIn profile link - the one external link with an unambiguous
-    # pattern. The rendered flight data also contains publication/appearance links
-    # mixed with site chrome, which can't be reliably told apart from a personal
-    # website, so the fallback does not guess websiteUrl (the JSON API path provides
-    # the structured `websites` list).
-    hrefs = sorted(set(re.findall(r'https?://[^\s"\\]+', blob)))
-    linkedin_url = next((h for h in hrefs if _LINKEDIN_PROFILE_RE.search(h)), None)
-
-    # Name + headline come from the document <title>: "First Last, Headline".
-    title_match = re.search(r'<title>([^<]+)</title>', html)
-    full_name = None
-    headline = None
-    if title_match:
-        title = re.sub(r'\s*\|\s*Former Gov.*$', '', title_match.group(1)).strip()
-        if ',' in title:
-            full_name, headline = (part.strip() for part in title.split(',', 1))
-        else:
-            full_name = title
-
-    # Exclude the site's own footer contact address from the fuzzy fallback scan.
-    email = next(
-        (m for m in _EMAIL_RE.findall(blob) if not m.lower().endswith('@formergov.com')),
-        None,
-    )
-
-    return {
-        'username': username,
-        'profileUrl': profile_page_url(username),
-        'fullName': full_name,
-        'headline': headline,
-        'linkedinUrl': linkedin_url,
-        'websiteUrl': None,
-        'email': email,
-        'websites': [{'name': 'LinkedIn', 'url': linkedin_url}] if linkedin_url else [],
-        'scrapedAt': scraped_at,
-        '_partial': True,
     }

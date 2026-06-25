@@ -91,7 +91,7 @@ def profile_url(username: str) -> str:
 
 
 def profile_page_url(username: str) -> str:
-    """Return the public HTML page URL for a profile (njsparser fallback source)."""
+    """Return the public profile page URL (used as the item's profileUrl)."""
     return f'{SITE_BASE}/directory/{username}'
 
 
