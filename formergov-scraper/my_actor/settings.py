@@ -54,4 +54,5 @@ TWISTED_REACTOR = 'twisted.internet.asyncioreactor.AsyncioSelectorReactor'
 
 ITEM_PIPELINES = {
     'my_actor.pipelines.ProfileDedupPipeline': 300,
+    'my_actor.pipelines.ProfileChargePipeline': 350,
 }
