@@ -31,9 +31,10 @@ AUTOTHROTTLE_MAX_DELAY = 30.0
 AUTOTHROTTLE_TARGET_CONCURRENCY = 2.0
 
 # Retry transient failures and WAF blocks. When Apify Proxy is enabled each retry
-# is routed through a fresh IP, so 401/403/429 blocks usually clear on retry.
+# is routed through a fresh IP, so 401/403/429 blocks usually clear on retry. More
+# attempts = more IP samples, which matters when only some datacenter IPs are blocked.
 RETRY_ENABLED = True
-RETRY_TIMES = 5
+RETRY_TIMES = 8
 RETRY_HTTP_CODES = [401, 403, 408, 429, 500, 502, 503, 504, 522, 524]
 
 # Present as a normal desktop browser; the API rejects some non-browser agents.

@@ -60,6 +60,7 @@ class FormerGovSpider(Spider):
         self.scraped_count = 0
         self.not_found_count = 0
         self.blocked_usernames: set[str] = set()
+        self.blocked_search_pages: set[int] = set()
         self.requeue_round = 0
 
     @classmethod
@@ -86,14 +87,16 @@ class FormerGovSpider(Spider):
 
         self.logger.error('No search params and no usernames provided - nothing to scrape.')
 
-    def _search_request(self, page: int) -> Request:
+    def _search_request(self, page: int, *, dont_filter: bool = False) -> Request:
         params = dict(self.search_params or {})
         params['page'] = page
         params['pageSize'] = self.page_size
         return Request(
             search_url(params),
             callback=self.parse_search,
+            errback=self.on_search_error,
             headers=BROWSER_HEADERS,
+            dont_filter=dont_filter,
             cb_kwargs={'page': page},
         )
 
@@ -116,7 +119,9 @@ class FormerGovSpider(Spider):
         try:
             data = json.loads(response.text)
         except ValueError:
-            self.logger.error('Search page %s returned non-JSON (HTTP %s).', page, response.status)
+            # A 2xx with a non-JSON body is usually a WAF interstitial - retry at end of run.
+            self.logger.warning('Search page %s returned non-JSON (HTTP %s); queued for end-of-run retry.', page, response.status)
+            self.blocked_search_pages.add(page)
             return
 
         usernames = [entry.get('username') for entry in data.get('usernames', []) if entry.get('username')]
@@ -165,6 +170,14 @@ class FormerGovSpider(Spider):
         row = build_item_from_profile(data, username, self._now())
         yield ProfileItem(**row)
 
+    def on_search_error(self, failure: Any) -> None:
+        page = failure.request.cb_kwargs.get('page', '?')
+        response = getattr(failure.value, 'response', None)
+        status = getattr(response, 'status', None)
+        # 403/429/5xx or a transport error - likely a temporary IP block. Retry at end.
+        self.blocked_search_pages.add(page)
+        self.logger.warning('Search page %s failed (HTTP %s); queued for end-of-run retry.', page, status or 'error')
+
     def on_profile_error(self, failure: Any) -> None:
         username = failure.request.cb_kwargs.get('username', '?')
         response = getattr(failure.value, 'response', None)
@@ -183,8 +196,20 @@ class FormerGovSpider(Spider):
     # -- end-of-run retry of blocked profiles ------------------------------------
 
     def on_spider_idle(self) -> None:
-        """When the queue drains, retry profiles blocked earlier (the block has likely lifted)."""
-        if not self.blocked_usernames or self.requeue_round >= self.MAX_REQUEUE_ROUNDS:
+        """When the queue drains, retry search pages/profiles blocked earlier (the block has likely lifted)."""
+        if not self.blocked_search_pages and not self.blocked_usernames:
+            return
+
+        if self.requeue_round >= self.MAX_REQUEUE_ROUNDS:
+            if self.blocked_search_pages:
+                self.logger.error(
+                    '%d search page(s) still blocked after %d retry rounds; results are likely '
+                    'INCOMPLETE. The proxy IPs are being rejected by the site - switch Proxy '
+                    'configuration to RESIDENTIAL groups and re-run. Blocked pages: %s',
+                    len(self.blocked_search_pages),
+                    self.requeue_round,
+                    ', '.join(str(p) for p in sorted(self.blocked_search_pages)),
+                )
             if self.blocked_usernames:
                 self.logger.warning(
                     '%d profile(s) still failing after %d retry rounds; giving up: %s',
@@ -195,20 +220,28 @@ class FormerGovSpider(Spider):
             return
 
         self.requeue_round += 1
-        batch = sorted(self.blocked_usernames)
+        pages = sorted(self.blocked_search_pages)
+        self.blocked_search_pages.clear()
+        usernames = sorted(self.blocked_usernames)
         self.blocked_usernames.clear()
-        self.logger.info('Requeue round %d: retrying %d blocked profile(s).', self.requeue_round, len(batch))
-        for username in batch:
-            self.crawler.engine.crawl(self._profile_request(username, dont_filter=True))
+        if pages:
+            self.logger.info('Requeue round %d: retrying %d blocked search page(s).', self.requeue_round, len(pages))
+            for page in pages:
+                self.crawler.engine.crawl(self._search_request(page, dont_filter=True))
+        if usernames:
+            self.logger.info('Requeue round %d: retrying %d blocked profile(s).', self.requeue_round, len(usernames))
+            for username in usernames:
+                self.crawler.engine.crawl(self._profile_request(username, dont_filter=True))
         raise DontCloseSpider
 
     def closed(self, reason: str) -> None:
         self.logger.info(
-            'Finished (%s): scraped %d, not-found(404) %d, permanently failed %d.',
+            'Finished (%s): scraped %d, not-found(404) %d, permanently failed %d, unfetched search pages %d.',
             reason,
             self.scraped_count,
             self.not_found_count,
             len(self.blocked_usernames),
+            len(self.blocked_search_pages),
         )
 
     @staticmethod
