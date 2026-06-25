@@ -16,7 +16,7 @@
         "scrapeEntireDirectory": {
             "title": "Scrape entire directory",
             "type": "boolean",
-            "description": "Scrape every profile in the directory, ignoring all search filters and specific usernames. Uses an unfiltered search of the selected Search type ('Combined' = all profiles). Set Max profiles to 0 to get everyone.",
+            "description": "Scrape every profile in the directory, ignoring all search filters, specific usernames, AND the Max profiles cap. Uses an unfiltered search of the selected Search type ('Combined' = all profiles).",
             "default": false
         },
         "text": {

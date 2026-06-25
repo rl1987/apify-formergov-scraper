@@ -32,7 +32,7 @@ Configure the run on the Actor's **Input** tab or via the API. All search filter
 | Field | Type | Description |
 |---|---|---|
 | `searchType` | select | `combined`, `current`, or `former` (default `combined`). |
-| `scrapeEntireDirectory` | boolean | Scrape every profile, ignoring filters/usernames. Set `maxItems` to 0 to get all. |
+| `scrapeEntireDirectory` | boolean | Scrape every profile, ignoring filters, usernames, and the `maxItems` cap. |
 | `text` | string | Free-text keyword search. |
 | `practiceAreas` | string list | Practice-area names (e.g. `Cybersecurity`, `Corporate Law`). |
 | `sectors` | string list | Sector names (e.g. `Legal`, `Technology`). |
@@ -125,10 +125,11 @@ The Actor uses lightweight HTTP requests (no headless browser), so it is inexpen
 
 ## Tips and advanced options
 
-- **Whole directory**: enable **Scrape entire directory** and set **Max profiles** to `0`. This pages through every profile (`searchType` = `combined` covers all of them) and uses the maximum page size automatically.
+- **Whole directory**: enable **Scrape entire directory** (it ignores filters and the Max profiles cap, and uses the maximum page size). `searchType` = `combined` covers every profile.
 - **Combined searches**: set `searchType` to `combined` and use `combinedFilters` for the second role leg (e.g. current law-firm role + former federal role).
 - **Future-proofing**: any filter not exposed in the form can be passed through `extraSearchParams`.
-- **Deep pagination**: the search API windows very large result sets, so for the most complete coverage split big pulls into narrower filtered queries rather than one unbounded run.
+- **Search result ceiling**: a single search returns at most **10,000** results (the backend's pagination window). The full directory is well under that, but for a filtered search exceeding 10,000, split it into narrower queries (e.g. by jurisdiction, sector, or state) to reach everything. The Actor logs a warning when a search exceeds this ceiling.
+- **Missing & blocked profiles**: some directory usernames have no public profile (HTTP 404) and are skipped. Profiles blocked by a temporary IP block (HTTP 403) are automatically retried at the end of the run, so transient blocks don't drop them. The run's final log line reports how many were scraped, not-found, and permanently failed.
 - **403 errors**: Former Gov has anti-bot protection that primarily blocks non-browser requests, which the Actor handles by sending browser headers, pacing requests (AutoThrottle), and retrying blocked requests on a fresh IP. Some datacenter IPs can also be rejected by reputation; if you see **persistent** `HTTP 403` warnings, switch the proxy to **residential** groups in the input.
 
 ## FAQ, disclaimers, and support

@@ -65,14 +65,13 @@ async def main() -> None:
         search_params = None
         if scrape_all:
             # Whole directory: unfiltered search of the chosen type ('combined' = all
-            # profiles). Ignore filters and usernames; use the max page size to minimise
-            # the number of (residential-proxied) requests.
+            # profiles). Ignore filters, usernames and any maxItems cap; use the max page
+            # size to minimise the number of (proxied) requests.
             usernames = []
             search_params = {'type': actor_input.get('searchType') or 'combined'}
             page_size = 1000
-            Actor.log.info('Scraping entire directory (type=%s).', search_params['type'])
-            if max_items:
-                Actor.log.warning('maxItems=%s caps the run; set it to 0 to scrape every profile.', max_items)
+            max_items = 0
+            Actor.log.info('Scraping entire directory (type=%s, no item cap).', search_params['type'])
         elif usernames:
             Actor.log.info('Direct mode: scraping %d profile(s) by username.', len(usernames))
         else:

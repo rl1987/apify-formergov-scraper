@@ -6,7 +6,8 @@ import json
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
-from scrapy import Request, Spider
+from scrapy import Request, Spider, signals
+from scrapy.exceptions import DontCloseSpider
 
 from ..formergov_api import BROWSER_HEADERS, profile_url, search_url
 from ..items import ProfileItem
@@ -15,6 +16,7 @@ from ..parsers import build_item_from_profile
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Generator
 
+    from scrapy.crawler import Crawler
     from scrapy.http.response import Response
 
 
@@ -25,9 +27,20 @@ class FormerGovSpider(Spider):
       * Search mode - page through ``/data/profiles`` with the requested filters and
         fetch every matching profile.
       * Direct mode - fetch a specific set of profiles by username (no search).
+
+    Profiles blocked by the anti-bot layer (HTTP 403/429/5xx) after retries are not
+    dropped immediately: they are collected and re-tried at the end of the run, once
+    the request queue has drained and any temporary IP block has cleared.
     """
 
     name = 'formergov'
+
+    # How many end-of-run passes to retry profiles that were blocked mid-run.
+    MAX_REQUEUE_ROUNDS = 2
+
+    # The search backend (elasticsearch) only returns results within a from+size
+    # window; offsets at/after this are empty. A single search cannot exceed it.
+    SEARCH_RESULT_WINDOW = 10000
 
     def __init__(
         self,
@@ -44,6 +57,16 @@ class FormerGovSpider(Spider):
         self.max_items = max_items or 0  # 0 == unlimited
         self.page_size = max(1, min(int(page_size or 100), 1000))
         self.enqueued_profiles = 0
+        self.scraped_count = 0
+        self.not_found_count = 0
+        self.blocked_usernames: set[str] = set()
+        self.requeue_round = 0
+
+    @classmethod
+    def from_crawler(cls, crawler: Crawler, *args: Any, **kwargs: Any) -> FormerGovSpider:
+        spider = super().from_crawler(crawler, *args, **kwargs)
+        crawler.signals.connect(spider.on_spider_idle, signal=signals.spider_idle)
+        return spider
 
     # -- request generation ------------------------------------------------------
 
@@ -74,12 +97,13 @@ class FormerGovSpider(Spider):
             cb_kwargs={'page': page},
         )
 
-    def _profile_request(self, username: str) -> Request:
+    def _profile_request(self, username: str, *, dont_filter: bool = False) -> Request:
         return Request(
             profile_url(username),
             callback=self.parse_profile,
             errback=self.on_profile_error,
             headers=BROWSER_HEADERS,
+            dont_filter=dont_filter,
             cb_kwargs={'username': username},
         )
 
@@ -101,6 +125,14 @@ class FormerGovSpider(Spider):
 
         if page == 1:
             self.logger.info('Search matched %s profiles across %s page(s).', total_hits, total_pages)
+            if isinstance(total_hits, int) and total_hits > self.SEARCH_RESULT_WINDOW:
+                self.logger.warning(
+                    'This search has %s results but the API only returns the first %s. '
+                    'Narrow the search with filters (e.g. jurisdiction, sector, state) to '
+                    'reach the rest.',
+                    total_hits,
+                    self.SEARCH_RESULT_WINDOW,
+                )
 
         for username in usernames:
             if not self._can_enqueue_more():
@@ -109,7 +141,9 @@ class FormerGovSpider(Spider):
             self.enqueued_profiles += 1
             yield self._profile_request(username)
 
-        if page < total_pages and self._can_enqueue_more():
+        # Stop before the result window: the next page starts at offset page*pageSize.
+        next_offset = page * self.page_size
+        if page < total_pages and self._can_enqueue_more() and next_offset < self.SEARCH_RESULT_WINDOW:
             yield self._search_request(page=page + 1)
 
     # -- individual profiles -----------------------------------------------------
@@ -121,9 +155,13 @@ class FormerGovSpider(Spider):
             data = None
 
         if not isinstance(data, dict) or not data:
-            self.logger.warning('Skipping %s: profile API returned empty/invalid JSON (HTTP %s).', username, response.status)
+            # A 2xx with an unexpected body - treat as transient and retry at end of run.
+            self.logger.warning('Profile %s returned empty/invalid JSON (HTTP %s); will retry.', username, response.status)
+            self.blocked_usernames.add(username)
             return
 
+        self.blocked_usernames.discard(username)
+        self.scraped_count += 1
         row = build_item_from_profile(data, username, self._now())
         yield ProfileItem(**row)
 
@@ -131,15 +169,47 @@ class FormerGovSpider(Spider):
         username = failure.request.cb_kwargs.get('username', '?')
         response = getattr(failure.value, 'response', None)
         status = getattr(response, 'status', None)
-        if status is not None:
-            self.logger.warning(
-                'Profile %s failed after retries with HTTP %s. The Former Gov WAF may be '
-                'blocking this IP - try enabling/raising proxy (residential) in the input.',
-                username,
-                status,
-            )
-        else:
-            self.logger.warning('Profile API request failed for %s: %s', username, failure.value)
+
+        if status == 404:
+            # The username has no profile document (private/removed). Expected; not a block.
+            self.not_found_count += 1
+            self.logger.info('Profile %s not found (HTTP 404); skipping.', username)
+            return
+
+        # 403/429/5xx or a transport error - likely a temporary IP block. Retry at end.
+        self.blocked_usernames.add(username)
+        self.logger.warning('Profile %s failed (HTTP %s); queued for end-of-run retry.', username, status or 'error')
+
+    # -- end-of-run retry of blocked profiles ------------------------------------
+
+    def on_spider_idle(self) -> None:
+        """When the queue drains, retry profiles blocked earlier (the block has likely lifted)."""
+        if not self.blocked_usernames or self.requeue_round >= self.MAX_REQUEUE_ROUNDS:
+            if self.blocked_usernames:
+                self.logger.warning(
+                    '%d profile(s) still failing after %d retry rounds; giving up: %s',
+                    len(self.blocked_usernames),
+                    self.requeue_round,
+                    ', '.join(sorted(self.blocked_usernames)),
+                )
+            return
+
+        self.requeue_round += 1
+        batch = sorted(self.blocked_usernames)
+        self.blocked_usernames.clear()
+        self.logger.info('Requeue round %d: retrying %d blocked profile(s).', self.requeue_round, len(batch))
+        for username in batch:
+            self.crawler.engine.crawl(self._profile_request(username, dont_filter=True))
+        raise DontCloseSpider
+
+    def closed(self, reason: str) -> None:
+        self.logger.info(
+            'Finished (%s): scraped %d, not-found(404) %d, permanently failed %d.',
+            reason,
+            self.scraped_count,
+            self.not_found_count,
+            len(self.blocked_usernames),
+        )
 
     @staticmethod
     def _now() -> str:
