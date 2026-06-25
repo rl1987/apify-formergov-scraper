@@ -51,7 +51,7 @@ Configure the run on the Actor's **Input** tab or via the API. All search filter
 | `startUrls` | request list | Profile page URLs to scrape directly. |
 | `maxItems` | integer | Max profiles to scrape (0 = no limit). |
 | `pageSize` | integer | Results per search page (1–1000). |
-| `proxyConfiguration` | object | Proxy settings (Apify Proxy datacenter is sufficient). |
+| `proxyConfiguration` | object | Proxy settings. **Residential proxy is required** (and the default) — the site's WAF blocks datacenter IPs. |
 
 Names for `practiceAreas`, `sectors`, `functions`, and `agency` are resolved to the directory's internal ids automatically; unrecognized names are skipped with a warning. You may also pass raw UUIDs.
 
@@ -130,6 +130,7 @@ The Actor uses lightweight HTTP requests (no headless browser), so it is inexpen
 - **Combined searches**: set `searchType` to `combined` and use `combinedFilters` for the second role leg (e.g. current law-firm role + former federal role).
 - **Future-proofing**: any filter not exposed in the form can be passed through `extraSearchParams`.
 - **Deep pagination**: the search API windows very large result sets, so for the most complete coverage split big pulls into narrower filtered queries rather than one unbounded run.
+- **WAF / 403 errors**: Former Gov is fronted by a WAF that blocks datacenter IPs, so the Actor uses **residential** proxy by default and you should keep it that way. It also sends browser headers, paces requests (AutoThrottle), and retries blocked requests on fresh IPs. Persistent `HTTP 403` means the proxy is not residential (datacenter/no-proxy will be blocked); ensure your plan includes residential proxy.
 
 ## FAQ, disclaimers, and support
 

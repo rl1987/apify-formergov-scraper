@@ -172,10 +172,10 @@
         "proxyConfiguration": {
             "title": "Proxy configuration",
             "type": "object",
-            "description": "Proxy servers used by the scraper. Apify Proxy (datacenter) is sufficient for this API.",
+            "description": "Proxy servers used by the scraper. The Former Gov API is behind a WAF that BLOCKS datacenter IPs with HTTP 403, so RESIDENTIAL proxy is required and selected by default. Using datacenter proxy (or none) will fail on the Apify platform. Requires a plan with residential proxy access.",
             "editor": "proxy",
-            "prefill": { "useApifyProxy": true },
-            "default": { "useApifyProxy": true }
+            "prefill": { "useApifyProxy": true, "apifyProxyGroups": ["RESIDENTIAL"] },
+            "default": { "useApifyProxy": true, "apifyProxyGroups": ["RESIDENTIAL"] }
         }
     },
     "required": []
