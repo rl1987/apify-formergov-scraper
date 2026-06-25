@@ -13,6 +13,12 @@
             "enumTitles": ["Combined (current + former)", "Current roles", "Former roles"],
             "default": "combined"
         },
+        "scrapeEntireDirectory": {
+            "title": "Scrape entire directory",
+            "type": "boolean",
+            "description": "Scrape every profile in the directory, ignoring all search filters and specific usernames. Uses an unfiltered search of the selected Search type ('Combined' = all profiles). Set Max profiles to 0 to get everyone.",
+            "default": false
+        },
         "text": {
             "title": "Keyword / free text",
             "type": "string",

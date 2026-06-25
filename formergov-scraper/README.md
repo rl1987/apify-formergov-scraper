@@ -32,6 +32,7 @@ Configure the run on the Actor's **Input** tab or via the API. All search filter
 | Field | Type | Description |
 |---|---|---|
 | `searchType` | select | `combined`, `current`, or `former` (default `combined`). |
+| `scrapeEntireDirectory` | boolean | Scrape every profile, ignoring filters/usernames. Set `maxItems` to 0 to get all. |
 | `text` | string | Free-text keyword search. |
 | `practiceAreas` | string list | Practice-area names (e.g. `Cybersecurity`, `Corporate Law`). |
 | `sectors` | string list | Sector names (e.g. `Legal`, `Technology`). |
@@ -126,7 +127,7 @@ The Actor uses lightweight HTTP requests (no headless browser), so it is inexpen
 
 ## Tips and advanced options
 
-- **Whole directory**: leave all filters empty and set `searchType` to `current` or `former`.
+- **Whole directory**: enable **Scrape entire directory** and set **Max profiles** to `0`. This pages through every profile (`searchType` = `combined` covers all of them) and uses the maximum page size automatically.
 - **Combined searches**: set `searchType` to `combined` and use `combinedFilters` for the second role leg (e.g. current law-firm role + former federal role).
 - **Future-proofing**: any filter not exposed in the form can be passed through `extraSearchParams`.
 - **Deep pagination**: the search API windows very large result sets, so for the most complete coverage split big pulls into narrower filtered queries rather than one unbounded run.

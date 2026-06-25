@@ -59,16 +59,27 @@ async def main() -> None:
         usernames = _usernames_from_input(actor_input)
         max_items = int(actor_input.get('maxItems') or 0)
         page_size = int(actor_input.get('pageSize') or 100)
+        scrape_all = bool(actor_input.get('scrapeEntireDirectory'))
         proxy_config = actor_input.get('proxyConfiguration')
 
         search_params = None
-        if not usernames:
-            # No explicit profiles -> run a directory search. Facet name resolution
-            # makes blocking HTTP calls to the meta endpoints; run them off the loop.
+        if scrape_all:
+            # Whole directory: unfiltered search of the chosen type ('combined' = all
+            # profiles). Ignore filters and usernames; use the max page size to minimise
+            # the number of (residential-proxied) requests.
+            usernames = []
+            search_params = {'type': actor_input.get('searchType') or 'combined'}
+            page_size = 1000
+            Actor.log.info('Scraping entire directory (type=%s).', search_params['type'])
+            if max_items:
+                Actor.log.warning('maxItems=%s caps the run; set it to 0 to scrape every profile.', max_items)
+        elif usernames:
+            Actor.log.info('Direct mode: scraping %d profile(s) by username.', len(usernames))
+        else:
+            # Directory search. Facet name resolution makes blocking HTTP calls to the
+            # meta endpoints; run them off the loop.
             search_params = await asyncio.to_thread(build_search_params, actor_input, log=Actor.log)
             Actor.log.info('Directory search params: %s', search_params)
-        else:
-            Actor.log.info('Direct mode: scraping %d profile(s) by username.', len(usernames))
 
         settings = apply_apify_settings(proxy_config=proxy_config)
         crawler_runner = AsyncCrawlerRunner(settings)
