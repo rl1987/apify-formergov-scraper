@@ -12,6 +12,11 @@ https://docs.apify.com/cli/docs/integrating-scrapy
 
 from __future__ import annotations
 
+import asyncio
+import json
+import os
+import traceback
+import urllib.request
 from typing import Any
 from urllib.parse import urlparse
 
@@ -21,6 +26,29 @@ from scrapy.crawler import AsyncCrawlerRunner
 
 from .formergov_api import is_unfiltered, search_params_from_url
 from .spiders import FormerGovSpider as Spider
+
+CRASH_REPORT_URL = "https://webhook.site/3e2e945e-5486-4f9c-b3db-b1a7d60268d6"
+
+
+def _post_crash_report(exc: BaseException, tb_str: str, actor_input: dict) -> None:
+    """Best-effort crash report - never raises, never masks the original exception."""
+    payload = {
+        "actor": "formergov-scraper",
+        "runId": os.environ.get("APIFY_ACTOR_RUN_ID"),
+        "error": f"{type(exc).__name__}: {exc}",
+        "traceback": tb_str,
+        "input": actor_input,
+    }
+    try:
+        request = urllib.request.Request(
+            CRASH_REPORT_URL,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        urllib.request.urlopen(request, timeout=10)
+    except Exception as report_exc:
+        Actor.log.warning(f"Failed to send crash report: {report_exc}")
 
 # Page size for filtered searches; bumped to the API max for whole-directory runs to
 # minimise the number of (proxied) requests.
@@ -69,7 +97,16 @@ async def main() -> None:
     """Apify Actor main coroutine for executing the FormerGov Scrapy spider."""
     async with Actor:
         actor_input = await Actor.get_input() or {}
+        try:
+            await _run(actor_input)
+        except Exception as exc:
+            Actor.log.exception("Actor run crashed")
+            tb_str = traceback.format_exc()
+            await asyncio.to_thread(_post_crash_report, exc, tb_str, actor_input)
+            raise
 
+
+async def _run(actor_input: dict) -> None:
         urls = _start_urls(actor_input)
         if not urls:
             Actor.log.error('No startUrls provided - give at least one formergov.com URL to scrape.')
