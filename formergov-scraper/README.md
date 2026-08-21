@@ -112,6 +112,10 @@ This Actor is **pay per result**: you are charged **US$0.0015 per profile** deli
 - **Missing & blocked profiles**: some directory usernames have no public profile (HTTP 404) and are skipped. Profiles blocked by a temporary IP block (HTTP 403) are automatically retried at the end of the run, so transient blocks don't drop them. The run's final log line reports how many were scraped, not-found, and permanently failed.
 - **403 errors**: FormerGov has anti-bot protection that primarily blocks non-browser requests, which the Actor handles by sending browser headers, pacing requests (AutoThrottle), and retrying blocked requests on a fresh IP. Some datacenter IPs can also be rejected by reputation; if you see **persistent** `HTTP 403` warnings, switch the proxy to **residential** groups in the input.
 
+## Did you find this useful?
+
+⭐ Rate this actor on Apify! Your feedback helps other users find it and helps us keep improving it.
+
 ## FAQ, disclaimers, and support
 
 **Is scraping FormerGov legal?** This Actor collects only publicly available profile information that FormerGov members choose to publish in the public directory. You are responsible for using the data in compliance with FormerGov's Terms of Service, applicable laws (including data-protection rules such as GDPR/CCPA), and for respecting individuals' privacy. Do not use the data for spam or any unlawful purpose.

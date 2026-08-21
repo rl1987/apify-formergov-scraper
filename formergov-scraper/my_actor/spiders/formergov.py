@@ -243,6 +243,7 @@ class FormerGovSpider(Spider):
             len(self.blocked_usernames),
             len(self.blocked_search_pages),
         )
+        self.logger.info('Did you find this useful? Rate this actor on Apify!')
 
     @staticmethod
     def _now() -> str:
