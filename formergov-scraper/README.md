@@ -114,7 +114,7 @@ This Actor is **pay per result**: you are charged **US$0.0015 per profile** deli
 
 ## Did you find this useful?
 
-⭐ Rate this actor on Apify! Your feedback helps other users find it and helps us keep improving it.
+Rate this actor on Apify! Your feedback helps other users find it and helps us keep improving it.
 
 ## FAQ, disclaimers, and support
 
