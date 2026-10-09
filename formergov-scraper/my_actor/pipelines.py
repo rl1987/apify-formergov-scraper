@@ -38,6 +38,13 @@ class ProfileDedupPipeline:
 class ProfileChargePipeline:
     """Charge one pay-per-event unit for each unique profile delivered to the dataset.
 
+    Registered at 1100 in settings.py, i.e. ABOVE the priority 1000 at which the
+    Apify SDK injects ``apify.scrapy.pipelines.ActorDatasetPushPipeline``. At the
+    old priority of 350 this ran *before* the push, so a profile that the push
+    pipeline then dropped — or one lost when the spider died between the two
+    stages — was billed without ever reaching the user's dataset. "Delivered to
+    the dataset" is only true after 1000.
+
     Runs after dedup, so duplicates are not billed. Charging is only active when the
     Actor runs on the Apify platform (or under local PPE testing via
     ``ACTOR_TEST_PAY_PER_EVENT``); in plain Scrapy runs it is a no-op.
