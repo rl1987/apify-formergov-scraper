@@ -59,6 +59,9 @@ class ProfileChargePipeline:
         self._actor = None
         self._charging = False
         self._limit_reached = False
+        #: Profiles this pipeline let through to the push at 1000, i.e. the ones the user
+        #: actually received. Counting what the spider scraped would overstate a capped run.
+        self._delivered = 0
         # Only a priced event may withhold a profile: a charge comes back with
         # nothing charged both past the cap and on a run that does not bill at all.
         self._billable = False
@@ -80,15 +83,28 @@ class ProfileChargePipeline:
     async def process_item(self, item: ProfileItem, spider: Spider) -> ProfileItem:
         if self._charging and self._actor is not None:
             result = await self._actor.charge(event_name=PROFILE_EVENT)
+            # An unbillable profile is dropped below and never reaches the push, so a
+            # profile counts as delivered only when the charge actually billed for it.
+            withheld = self._billable and not getattr(result, 'charged_count', 0)
+            if not withheld:
+                self._delivered += 1
             if getattr(result, 'event_charge_limit_reached', False) and not self._limit_reached:
                 self._limit_reached = True
                 spider.logger.warning(
-                    'Pay-per-event charge limit reached; stopping the crawl to avoid further work.'
+                    'Pay-per-event charge limit reached after %s profile(s); stopping the crawl.',
+                    self._delivered,
+                )
+                # A cap hit still finishes SUCCEEDED, so the truncation has to explain
+                # itself, or the short dataset reads as the end of the results.
+                await self._actor.set_status_message(
+                    f'Stopped after {self._delivered} profile(s): this run hit its maximum cost '
+                    "setting, not the end of the results. Raise the run's max total charge, or "
+                    'lower maxItems, to collect the rest.'
                 )
                 # Scrapy finishes the pipelines already in flight before it shuts the
                 # crawl down, so a profile that was billed here still reaches the push.
                 spider.crawler.engine.close_spider(spider, 'charge_limit_reached')
-            if self._billable and not getattr(result, 'charged_count', 0):
+            if withheld:
                 # Nothing was billed for this profile, so it must not be delivered.
                 raise DropItem('the run reached its maximum total charge')
         return item
