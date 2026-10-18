@@ -55,7 +55,8 @@ TWISTED_REACTOR = 'twisted.internet.asyncioreactor.AsyncioSelectorReactor'
 
 ITEM_PIPELINES = {
     'my_actor.pipelines.ProfileDedupPipeline': 300,
-    # Above 1000, where the Apify SDK injects ActorDatasetPushPipeline: a profile
-    # must reach the dataset before it is billed. See ProfileChargePipeline.
-    'my_actor.pipelines.ProfileChargePipeline': 1100,
+    # Below 1000, where the Apify SDK injects ActorDatasetPushPipeline: a profile
+    # must be billed before it reaches the dataset, because past the run's charge
+    # limit Actor.charge bills nothing and raises nothing. See ProfileChargePipeline.
+    'my_actor.pipelines.ProfileChargePipeline': 900,
 }

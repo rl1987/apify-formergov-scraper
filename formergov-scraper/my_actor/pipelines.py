@@ -36,14 +36,19 @@ class ProfileDedupPipeline:
 
 
 class ProfileChargePipeline:
-    """Charge one pay-per-event unit for each unique profile delivered to the dataset.
+    """Charge one pay-per-event unit for each unique profile before it is delivered.
 
-    Registered at 1100 in settings.py, i.e. ABOVE the priority 1000 at which the
+    Registered at 900 in settings.py, i.e. BELOW the priority 1000 at which the
     Apify SDK injects ``apify.scrapy.pipelines.ActorDatasetPushPipeline``. At the
-    old priority of 350 this ran *before* the push, so a profile that the push
-    pipeline then dropped — or one lost when the spider died between the two
-    stages — was billed without ever reaching the user's dataset. "Delivered to
-    the dataset" is only true after 1000.
+    original priority of 350 this also ran before the push, and a profile that the
+    push pipeline then dropped — or one lost when the spider died between the two
+    stages — was billed without ever reaching the user's dataset. The concern was
+    real; moving the charge to 1100 was the wrong answer, because past the run's
+    ``maxTotalChargeUsd`` ``Actor.charge`` bills nothing and raises nothing, so a
+    profile charged after the push had already been delivered for free. Charging
+    below 1000 and dropping a profile that could not be billed is neither
+    billed-and-not-delivered nor delivered-and-not-billed: an unbillable profile
+    never reaches the push.
 
     Runs after dedup, so duplicates are not billed. Charging is only active when the
     Actor runs on the Apify platform (or under local PPE testing via
@@ -54,6 +59,9 @@ class ProfileChargePipeline:
         self._actor = None
         self._charging = False
         self._limit_reached = False
+        # Only a priced event may withhold a profile: a charge comes back with
+        # nothing charged both past the cap and on a run that does not bill at all.
+        self._billable = False
 
     def open_spider(self, spider: Spider) -> None:
         try:
@@ -62,16 +70,25 @@ class ProfileChargePipeline:
             if Actor.is_at_home() or os.environ.get('ACTOR_TEST_PAY_PER_EVENT'):
                 self._actor = Actor
                 self._charging = True
+                info = Actor.get_charging_manager().get_pricing_info()
+                self._billable = bool(info.is_pay_per_event) and PROFILE_EVENT in set(info.per_event_prices or {})
         except Exception as exc:  # noqa: BLE001 - charging is best-effort, never block scraping
+            # A failed read must fall back to delivering, never to withholding.
+            self._billable = False
             spider.logger.debug('Pay-per-event charging disabled: %s', exc)
 
     async def process_item(self, item: ProfileItem, spider: Spider) -> ProfileItem:
-        if self._charging and not self._limit_reached and self._actor is not None:
+        if self._charging and self._actor is not None:
             result = await self._actor.charge(event_name=PROFILE_EVENT)
-            if getattr(result, 'event_charge_limit_reached', False):
+            if getattr(result, 'event_charge_limit_reached', False) and not self._limit_reached:
                 self._limit_reached = True
                 spider.logger.warning(
                     'Pay-per-event charge limit reached; stopping the crawl to avoid further work.'
                 )
+                # Scrapy finishes the pipelines already in flight before it shuts the
+                # crawl down, so a profile that was billed here still reaches the push.
                 spider.crawler.engine.close_spider(spider, 'charge_limit_reached')
+            if self._billable and not getattr(result, 'charged_count', 0):
+                # Nothing was billed for this profile, so it must not be delivered.
+                raise DropItem('the run reached its maximum total charge')
         return item
