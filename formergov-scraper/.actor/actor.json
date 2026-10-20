@@ -7,7 +7,7 @@
 	"version": "0.1",
 	"buildTag": "latest",
 	"defaultRunOptions": {
-		"memoryMbytes": 1024
+		"memoryMbytes": 512
 	},
 	"meta": {
 		"templateId": "python-scrapy",
