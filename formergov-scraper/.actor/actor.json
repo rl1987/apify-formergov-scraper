@@ -1,22 +1,22 @@
 {
-	"$schema": "https://apify.com/schemas/v1/actor.ide.json",
-	"actorSpecification": 1,
-	"name": "formergov-scraper",
-	"title": "FormerGov Directory Scraper",
-	"description": "Scrapes the formergov.com directory of former government and military professionals, with contact info (LinkedIn, website) and full advanced-search filtering.",
-	"version": "0.1",
-	"buildTag": "latest",
-	"defaultRunOptions": {
-		"memoryMbytes": 512
-	},
-	"meta": {
-		"templateId": "python-scrapy",
-		"generatedBy": "Claude Code with Claude Opus 4.8"
-	},
-	"input": "./input_schema.json",
-	"output": "./output_schema.json",
-	"storages": {
-		"dataset": "./dataset_schema.json"
-	},
-	"dockerfile": "../Dockerfile"
+  "$schema": "https://apify.com/schemas/v1/actor.ide.json",
+  "actorSpecification": 1,
+  "name": "formergov-scraper",
+  "title": "FormerGov Directory Scraper",
+  "description": "Scrapes the formergov.com directory of former government and military professionals, with contact info (LinkedIn, website, email) and full advanced-search filtering.",
+  "version": "0.1",
+  "buildTag": "latest",
+  "defaultRunOptions": {
+    "memoryMbytes": 512
+  },
+  "meta": {
+    "templateId": "python-scrapy",
+    "generatedBy": "Claude Code with Claude Opus 4.8"
+  },
+  "input": "./input_schema.json",
+  "output": "./output_schema.json",
+  "storages": {
+    "dataset": "./dataset_schema.json"
+  },
+  "dockerfile": "../Dockerfile"
 }
