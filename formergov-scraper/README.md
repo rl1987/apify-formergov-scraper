@@ -102,7 +102,9 @@ Each dataset item is one person. You can download the dataset in various formats
 
 ## How much does it cost to scrape FormerGov?
 
-This Actor is **pay per result**: you are charged **US$0.0015 per profile** delivered to the dataset (US$1.50 per 1,000 profiles). You only pay for unique profiles actually returned — duplicates, not-found (404) profiles, and failed requests are not billed. For example, scraping the entire directory (~2,500 profiles) costs about **US$3.75**. Set **Max profiles** (`maxItems`) to cap how many rows a run can produce, and set your run's max-charge limit in the Console to stay within budget.
+The current price of every event is on the **Pricing** tab of this Actor's page in Apify Store. That tab is generated from the Actor's own pricing record, so it is always current, and your plan's rung is applied automatically. A figure repeated here would be a second copy that drifts out of date.
+
+You can cap what any single run may spend with **Max total charge**.
 
 ## Tips and advanced options
 
