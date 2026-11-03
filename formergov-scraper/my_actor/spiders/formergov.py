@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any
 from scrapy import Request, Spider, signals
 from scrapy.exceptions import DontCloseSpider
 
+from ..billing import LEDGER
 from ..formergov_api import BROWSER_HEADERS, profile_url, search_url
 from ..items import ProfileItem
 from ..parsers import build_item_from_profile
@@ -111,6 +112,14 @@ class FormerGovSpider(Spider):
         )
 
     def _can_enqueue_more(self) -> bool:
+        # `should_enqueue` is the ledger's re-check, and it is load-bearing rather than
+        # defensive: the charge that spends the budget fires in the same pass that queues
+        # the next page, so a spider that only checked its own counter would keep
+        # fetching profiles the buyer can no longer be billed for. `max_items` here is
+        # the pre-fetch limiter that saves those requests; the ledger enforces the limit
+        # itself, on rows DELIVERED.
+        if not LEDGER.should_enqueue():
+            return False
         return self.max_items == 0 or self.enqueued_profiles < self.max_items
 
     # -- search results ----------------------------------------------------------
@@ -198,6 +207,13 @@ class FormerGovSpider(Spider):
     def on_spider_idle(self) -> None:
         """When the queue drains, retry search pages/profiles blocked earlier (the block has likely lifted)."""
         if not self.blocked_search_pages and not self.blocked_usernames:
+            return
+
+        if not LEDGER.should_enqueue():
+            # The budget is spent, maxItems is reached, or the charging channel broke.
+            # Retrying blocked work now would cost the buyer requests for rows that can
+            # never be delivered.
+            self.logger.info('Not retrying blocked requests: nothing more can be billed.')
             return
 
         if self.requeue_round >= self.MAX_REQUEUE_ROUNDS:
