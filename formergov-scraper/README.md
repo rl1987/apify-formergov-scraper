@@ -1,6 +1,6 @@
 # FormerGov Directory Scraper
 
-**Extract former government and military professionals from the [FormerGov](https://formergov.com) directory — with their contact info (LinkedIn profile and website) and full professional background.** Mirror the site's advanced search with structured filters, or pull specific profiles by username. Built with Scrapy on the Apify platform, so you get scheduling, a versioned API, integrations, proxy rotation, and run monitoring out of the box.
+**Extract former government and military professionals from the [FormerGov](https://formergov.com) directory — with their published contact links (LinkedIn profile and firm/personal website) and full professional background.** There is no email address anywhere in this data: FormerGov does not publish one, so a row gives you a LinkedIn profile and a firm page to resolve from, not an inbox. Mirror the site's advanced search with structured filters, or pull specific profiles by username. Built with Scrapy on the Apify platform, so you get scheduling, a versioned API, integrations, proxy rotation, and run monitoring out of the box.
 
 ## What does FormerGov Directory Scraper do?
 
@@ -33,8 +33,9 @@ The Actor takes a single field: a list of FormerGov URLs copied straight from yo
 | Field | Type | Description |
 |---|---|---|
 | `startUrls` | request list | FormerGov URLs to scrape. Each URL is one of: a **directory search URL** (e.g. `https://formergov.com/directory?type=combined&sectors=<uuid>`) whose filters drive the search; the **home page** `https://formergov.com` (or a bare `/directory`) to scrape the whole directory; or an **individual profile URL** `https://formergov.com/directory/<username>`. `page`/`pageSize` in the URL are ignored — the Actor paginates for you. |
-| `maxItems` | integer | Max profiles to scrape (0 = no limit). |
-| `proxyConfiguration` | object | Proxy settings. Defaults to Apify Proxy (datacenter). If you see persistent `HTTP 403`, switch to **residential** groups. |
+| `maxItems` | integer | Max profiles to deliver (0 = no limit). |
+| `maxItems` note | — | Counts profiles **delivered**: duplicates and profiles that resolved nothing never count against it. |
+| `proxyConfiguration` | object | Proxy settings. **Defaults to Apify Proxy with the RESIDENTIAL group, which this target requires** — see "403 errors" below. |
 
 If any individual profile URLs are present, only those are scraped (the search URL is ignored).
 
@@ -43,11 +44,17 @@ If any individual profile URLs are present, only those are scraped (the search U
 ```json
 {
   "startUrls": [
-    { "url": "https://formergov.com/directory?type=combined&practiceAreas=1e01b018-bd8a-4c1b-857d-3f93d613935a&sectors=e97b9d61-7fd5-4565-8ca5-8f4d5a9dd56e" }
+    { "url": "https://formergov.com/directory?type=combined&practiceAreas=d8ac7065-59f2-4724-889e-b1af7299bd47&sectors=7738e4e4-87f6-4f8d-978b-954959c7d0ff" }
   ],
-  "maxItems": 200
+  "maxItems": 200,
+  "proxyConfiguration": { "useApifyProxy": true, "apifyProxyGroups": ["RESIDENTIAL"] }
 }
 ```
+
+That example is practice area *National Security* in the *Government Services* sector —
+36 profiles as of 2026-11-03. The site **ANDs** its filters, so an unusual
+practice-area + sector pair can legitimately match nobody; the run then finishes with a
+status message saying the search matched no one rather than an unexplained empty dataset.
 
 ## Output
 
@@ -89,14 +96,14 @@ Each dataset item is one person. You can download the dataset in various formats
 | `firstName`, `middleName`, `lastName`, `fullName` | Person's name. |
 | `headline` | Professional headline. |
 | `city`, `state`, `country` | Location. |
-| `linkedinUrl` | LinkedIn profile URL (contact). |
-| `websiteUrl` | Primary non-LinkedIn website (contact). |
-| `websites` | Full list of `{name, url}` links on the profile. |
+| `linkedinUrl` | LinkedIn profile URL (contact). **Conditional**: present on 25 of 40 whole-directory profiles sampled on 2026-11-03 (62.5%) — members choose which links to publish. |
+| `websiteUrl` | Primary non-LinkedIn website, usually the person's firm page (contact). Conditional: 32 of 40 (80%). |
+| `websites` | Full list of `{name, url}` links on the profile. Conditional: 32 of 40 (80%). |
 | `clearVerified` | Whether the member is identity-verified via CLEAR. |
-| `currentTitle`, `currentEmployer` | Current role. |
+| `currentTitle`, `currentEmployer` | Current role, from the `roles` entry flagged `isCurrentRole`. Conditional: 33 of 40 (82.5%) — a member with no current role listed has both `null`. |
 | `sectors`, `practiceAreas`, `functions` | Expertise tags. |
 | `roles` | Structured employment history. |
-| `biography`, `education`, `certifications`, `languages`, `memberships`, `honorsAwards`, `publications` | Rich profile detail. |
+| `biography`, `education`, `certifications`, `languages`, `memberships`, `honorsAwards`, `publications` | Rich profile detail, all conditional on what the member filled in. Coverage on the same 40-profile sample: biography 85%, education 85%, languages 85%, memberships 78%, publications 65%, honoursAwards 45%, certifications 15%. |
 | `profilePicture` | Profile image URL. |
 | `scrapedAt` | ISO timestamp of extraction. |
 
@@ -112,7 +119,24 @@ You can cap what any single run may spend with **Max total charge**.
 - **Any filter**: anything the site's advanced search can express ends up in the URL (search type, practice areas, sectors, functions, jurisdiction, agency, combined second-leg filters, free text, …), so it works automatically — just build the search on formergov.com and copy the URL.
 - **Search result ceiling**: a single search returns at most **10,000** results (the backend's pagination window). The full directory is well under that, but for a filtered search exceeding 10,000, split it into narrower queries (e.g. by jurisdiction, sector, or state) to reach everything. The Actor logs a warning when a search exceeds this ceiling.
 - **Missing & blocked profiles**: some directory usernames have no public profile (HTTP 404) and are skipped. Profiles blocked by a temporary IP block (HTTP 403) are automatically retried at the end of the run, so transient blocks don't drop them. The run's final log line reports how many were scraped, not-found, and permanently failed.
-- **403 errors**: FormerGov has anti-bot protection that primarily blocks non-browser requests, which the Actor handles by sending browser headers, pacing requests (AutoThrottle), and retrying blocked requests on a fresh IP. Some datacenter IPs can also be rejected by reputation; if you see **persistent** `HTTP 403` warnings, switch the proxy to **residential** groups in the input.
+- **403 errors — use the RESIDENTIAL proxy group, which is now the default.** FormerGov's
+  CDN rejects Apify's datacenter IPs by reputation. Measured 2026-11-03: on datacenter,
+  the **profile** endpoint — where every delivered row comes from — answered `HTTP 403`
+  on 3 of 3 attempts, while the search endpoint answered 403 on only 1 of 3; a platform
+  run the same day took 403 on 27 of 27 requests and delivered 0 rows. The same requests
+  on RESIDENTIAL answered `HTTP 200` on 6 of 6. That split is why a datacenter run could
+  look like it was working, list usernames, and still deliver nothing. The Actor now
+  defaults (and prefills) the RESIDENTIAL group, warns at the start of a run if it is
+  given a datacenter configuration anyway, and **fails** a run that collected nothing
+  because it was blocked rather than finishing SUCCEEDED with an empty dataset. The
+  anti-bot layer also blocks non-browser requests, which the Actor handles with browser
+  headers, pacing (AutoThrottle), and retrying on a fresh IP.
+- **How a run that returns nothing explains itself.** There are four ways to get an empty
+  dataset and they are no longer interchangeable: no usable URL in `startUrls` (SUCCEEDED,
+  with the reason), a search that matched nobody (SUCCEEDED, saying nothing was blocked),
+  a run blocked by the site (**FAILED**, naming the proxy fix), and a run cut short by
+  **Max total charge** (SUCCEEDED, saying how many rows it stopped at). Only profiles
+  actually delivered are ever charged.
 
 ## Did you find this useful?
 

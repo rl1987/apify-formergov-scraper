@@ -1,6 +1,174 @@
 {
     "actorSpecification": 1,
-    "fields": {},
+    "fields": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "required": [
+            "username",
+            "profileUrl",
+            "scrapedAt"
+        ],
+        "properties": {
+            "username": {
+                "type": "string",
+                "description": "Directory handle. Always present."
+            },
+            "profileUrl": {
+                "type": "string",
+                "description": "Public profile page URL. Always present."
+            },
+            "scrapedAt": {
+                "type": "string",
+                "description": "ISO timestamp of extraction. Always present."
+            },
+            "firstName": {
+                "type": [
+                    "string",
+                    "null"
+                ],
+                "description": "Always present on the 40 profiles sampled."
+            },
+            "middleName": {
+                "type": [
+                    "string",
+                    "null"
+                ],
+                "description": "Conditional - 20 of 40 sampled (50%)."
+            },
+            "lastName": {
+                "type": [
+                    "string",
+                    "null"
+                ],
+                "description": "Always present on the 40 profiles sampled."
+            },
+            "fullName": {
+                "type": [
+                    "string",
+                    "null"
+                ],
+                "description": "Always present on the 40 profiles sampled."
+            },
+            "headline": {
+                "type": [
+                    "string",
+                    "null"
+                ],
+                "description": "Conditional - 34 of 40 sampled (85%)."
+            },
+            "city": {
+                "type": [
+                    "string",
+                    "null"
+                ],
+                "description": "Conditional - 34 of 40 sampled (85%)."
+            },
+            "state": {
+                "type": [
+                    "string",
+                    "null"
+                ],
+                "description": "Conditional - 29 of 40 sampled (72.5%); non-US members often have none."
+            },
+            "country": {
+                "type": [
+                    "string",
+                    "null"
+                ],
+                "description": "Conditional - 34 of 40 sampled (85%)."
+            },
+            "linkedinUrl": {
+                "type": [
+                    "string",
+                    "null"
+                ],
+                "description": "LinkedIn profile URL. CONDITIONAL - 25 of 40 sampled (62.5%): members choose which links to publish. There is no email field on this target at all."
+            },
+            "websiteUrl": {
+                "type": [
+                    "string",
+                    "null"
+                ],
+                "description": "First non-LinkedIn link, usually the member's firm page. Conditional - 32 of 40 sampled (80%)."
+            },
+            "currentTitle": {
+                "type": [
+                    "string",
+                    "null"
+                ],
+                "description": "From the `roles` entry flagged isCurrentRole. Conditional - 33 of 40 sampled (82.5%); null when no current role is listed."
+            },
+            "currentEmployer": {
+                "type": [
+                    "string",
+                    "null"
+                ],
+                "description": "See currentTitle. Conditional - 33 of 40 sampled (82.5%)."
+            },
+            "biography": {
+                "type": [
+                    "string",
+                    "null"
+                ],
+                "description": "Flattened from the profile rich-text document. Conditional - 34 of 40 sampled (85%)."
+            },
+            "profilePicture": {
+                "type": [
+                    "string",
+                    "null"
+                ],
+                "description": "Conditional - 34 of 40 sampled (85%)."
+            },
+            "clearVerified": {
+                "type": "boolean",
+                "description": "Whether the member is identity-verified via CLEAR. Always present; true on 38 of 40 sampled."
+            },
+            "websites": {
+                "type": "array",
+                "description": "Every {name, url} link on the profile. Conditional - non-empty on 32 of 40 sampled (80%)."
+            },
+            "sectors": {
+                "type": "array",
+                "description": "Conditional - non-empty on 33 of 40 sampled (82.5%)."
+            },
+            "practiceAreas": {
+                "type": "array",
+                "description": "Conditional - non-empty on 34 of 40 sampled (85%)."
+            },
+            "functions": {
+                "type": "array",
+                "description": "Derived from the roles, de-duplicated. Conditional - 33 of 40 sampled (82.5%)."
+            },
+            "roles": {
+                "type": "array",
+                "description": "Structured employment history, 1-11 entries. Conditional - non-empty on 33 of 40 sampled (82.5%)."
+            },
+            "education": {
+                "type": "array",
+                "description": "Conditional - non-empty on 34 of 40 sampled (85%)."
+            },
+            "certifications": {
+                "type": "array",
+                "description": "Conditional - non-empty on only 6 of 40 sampled (15%)."
+            },
+            "languages": {
+                "type": "array",
+                "description": "List of language codes. Conditional - 34 of 40 sampled (85%)."
+            },
+            "memberships": {
+                "type": "array",
+                "description": "Conditional - non-empty on 31 of 40 sampled (77.5%)."
+            },
+            "honorsAwards": {
+                "type": "array",
+                "description": "Conditional - non-empty on 18 of 40 sampled (45%)."
+            },
+            "publications": {
+                "type": "array",
+                "description": "Conditional - non-empty on 26 of 40 sampled (65%)."
+            }
+        }
+    },
     "views": {
         "overview": {
             "title": "Overview",
@@ -22,31 +190,77 @@
             "display": {
                 "component": "table",
                 "properties": {
-                    "fullName": { "label": "Name", "format": "text" },
-                    "headline": { "label": "Headline", "format": "text" },
-                    "linkedinUrl": { "label": "LinkedIn", "format": "link" },
-                    "websiteUrl": { "label": "Website", "format": "link" },
-                    "city": { "label": "City", "format": "text" },
-                    "state": { "label": "State", "format": "text" },
-                    "country": { "label": "Country", "format": "text" },
-                    "currentTitle": { "label": "Current title", "format": "text" },
-                    "currentEmployer": { "label": "Current employer", "format": "text" },
-                    "clearVerified": { "label": "CLEAR verified", "format": "boolean" },
-                    "profileUrl": { "label": "Profile", "format": "link" }
+                    "fullName": {
+                        "label": "Name",
+                        "format": "text"
+                    },
+                    "headline": {
+                        "label": "Headline",
+                        "format": "text"
+                    },
+                    "linkedinUrl": {
+                        "label": "LinkedIn",
+                        "format": "link"
+                    },
+                    "websiteUrl": {
+                        "label": "Website",
+                        "format": "link"
+                    },
+                    "city": {
+                        "label": "City",
+                        "format": "text"
+                    },
+                    "state": {
+                        "label": "State",
+                        "format": "text"
+                    },
+                    "country": {
+                        "label": "Country",
+                        "format": "text"
+                    },
+                    "currentTitle": {
+                        "label": "Current title",
+                        "format": "text"
+                    },
+                    "currentEmployer": {
+                        "label": "Current employer",
+                        "format": "text"
+                    },
+                    "clearVerified": {
+                        "label": "CLEAR verified",
+                        "format": "boolean"
+                    },
+                    "profileUrl": {
+                        "label": "Profile",
+                        "format": "link"
+                    }
                 }
             }
         },
         "contacts": {
             "title": "Contacts",
             "transformation": {
-                "fields": ["fullName", "linkedinUrl", "websiteUrl"]
+                "fields": [
+                    "fullName",
+                    "linkedinUrl",
+                    "websiteUrl"
+                ]
             },
             "display": {
                 "component": "table",
                 "properties": {
-                    "fullName": { "label": "Name", "format": "text" },
-                    "linkedinUrl": { "label": "LinkedIn", "format": "link" },
-                    "websiteUrl": { "label": "Website", "format": "link" }
+                    "fullName": {
+                        "label": "Name",
+                        "format": "text"
+                    },
+                    "linkedinUrl": {
+                        "label": "LinkedIn",
+                        "format": "link"
+                    },
+                    "websiteUrl": {
+                        "label": "Website",
+                        "format": "link"
+                    }
                 }
             }
         }

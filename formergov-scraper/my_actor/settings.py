@@ -53,10 +53,11 @@ TELNETCONSOLE_ENABLED = False
 # Do not change the Twisted reactor unless you really know what you are doing.
 TWISTED_REACTOR = 'twisted.internet.asyncioreactor.AsyncioSelectorReactor'
 
+# One pipeline, and it is the only thing that writes or charges: it de-duplicates,
+# validates, charges and writes each profile under one lock, through the SDK's atomic
+# `push_data(..., charged_event_name=...)`. main.py switches OFF the SDK's own
+# ActorDatasetPushPipeline (injected at 1000 by apply_apify_settings) so there is
+# exactly one writer. See my_actor/pipelines.py for what this replaced.
 ITEM_PIPELINES = {
-    'my_actor.pipelines.ProfileDedupPipeline': 300,
-    # Below 1000, where the Apify SDK injects ActorDatasetPushPipeline: a profile
-    # must be billed before it reaches the dataset, because past the run's charge
-    # limit Actor.charge bills nothing and raises nothing. See ProfileChargePipeline.
-    'my_actor.pipelines.ProfileChargePipeline': 900,
+    'my_actor.pipelines.ProfileLedgerPipeline': 300,
 }

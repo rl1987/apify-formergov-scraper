@@ -7,16 +7,18 @@
         "startUrls": {
             "title": "FormerGov URLs",
             "type": "array",
-            "description": "Paste FormerGov URLs straight from your browser:\n\n- A **directory search URL** to scrape its results, e.g. `https://formergov.com/directory?type=combined&practiceAreas=1e01b018-bd8a-4c1b-857d-3f93d613935a&sectors=e97b9d61-7fd5-4565-8ca5-8f4d5a9dd56e`. Build it on the site with the advanced search filters you want, then copy the address bar.\n- The **home page** `https://formergov.com` (or a bare `https://formergov.com/directory`) to scrape the entire directory.\n- An **individual profile URL** like `https://formergov.com/directory/brianlevine` to scrape just that person.\n\nYou can mix several profile URLs, or give a single search/home-page URL. `page`/`pageSize` in the URL are ignored — the scraper paginates for you.",
+            "description": "Paste FormerGov URLs straight from your browser:\n\n- A **directory search URL** to scrape its results, e.g. `https://formergov.com/directory?type=combined&practiceAreas=d8ac7065-59f2-4724-889e-b1af7299bd47&sectors=7738e4e4-87f6-4f8d-978b-954959c7d0ff` (the prefilled example: practice area *National Security* in the *Government Services* sector, 36 profiles as of 2026-11-03). Build it on the site with the advanced search filters you want, then copy the address bar.\n- The **home page** `https://formergov.com` (or a bare `https://formergov.com/directory`) to scrape the entire directory.\n- An **individual profile URL** like `https://formergov.com/directory/brianlevine` to scrape just that person.\n\nYou can mix several profile URLs, or give a single search/home-page URL. `page`/`pageSize` in the URL are ignored \u2014 the scraper paginates for you.\n\nNote that the site **ANDs** its filters, so an unusual practice-area + sector pair can legitimately match nobody.",
             "editor": "requestListSources",
             "prefill": [
-                { "url": "https://formergov.com/directory?type=combined&practiceAreas=1e01b018-bd8a-4c1b-857d-3f93d613935a&sectors=e97b9d61-7fd5-4565-8ca5-8f4d5a9dd56e" }
+                {
+                    "url": "https://formergov.com/directory?type=combined&practiceAreas=d8ac7065-59f2-4724-889e-b1af7299bd47&sectors=7738e4e4-87f6-4f8d-978b-954959c7d0ff"
+                }
             ]
         },
         "maxItems": {
             "title": "Max profiles",
             "type": "integer",
-            "description": "Maximum number of profiles to scrape (0 = no limit). Note: deep pagination on the search API is windowed, so very large searches may not reach every result in one run — narrow the search with filters to get the rest.",
+            "description": "Maximum number of profiles to DELIVER (0 = no limit). Duplicates, and profiles that resolved nothing, never count against it. Note: deep pagination on the search API is windowed, so very large searches may not reach every result in one run - narrow the search with filters to get the rest.",
             "editor": "number",
             "default": 0,
             "minimum": 0,
@@ -25,10 +27,20 @@
         "proxyConfiguration": {
             "title": "Proxy configuration",
             "type": "object",
-            "description": "Proxy servers used by the scraper. The site has anti-bot protection that mainly blocks non-browser requests (handled by the scraper's browser headers); blocked requests are retried on a fresh IP. If you hit persistent HTTP 403 warnings, some datacenter IPs are likely being rejected — switch to RESIDENTIAL proxy groups here.",
+            "description": "Proxy servers used by the scraper. **The RESIDENTIAL group is required.** cdn.formergov.com rejects Apify's datacenter IPs: re-measured 2026-11-03, the profile endpoint - the one every delivered row comes from - answered HTTP 403 on 3 of 3 datacenter attempts while the search endpoint answered 403 on 1 of 3, which is why a datacenter run can look like it is working and still deliver zero rows (a platform run on 2026-11-03 took 403 on 27 of 27 requests for 0 rows). The same requests on RESIDENTIAL answered HTTP 200 on 6 of 6. The default and prefill below are therefore RESIDENTIAL; leaving the groups empty resolves to DATACENTER. The site also blocks non-browser requests, which the scraper handles with browser headers; blocked requests are retried on a fresh IP.",
             "editor": "proxy",
-            "prefill": { "useApifyProxy": true },
-            "default": { "useApifyProxy": true }
+            "prefill": {
+                "useApifyProxy": true,
+                "apifyProxyGroups": [
+                    "RESIDENTIAL"
+                ]
+            },
+            "default": {
+                "useApifyProxy": true,
+                "apifyProxyGroups": [
+                    "RESIDENTIAL"
+                ]
+            }
         }
     },
     "required": []
